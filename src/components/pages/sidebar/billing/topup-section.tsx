@@ -6,8 +6,9 @@ import { useBillingActions } from "@/hooks/ui/use-billing-actions";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-// Mirrors Creem's custom_price bounds in the upstream handler; NowPayments shares them.
-const CUSTOM_MIN = 1;
+// Mirrors the bounds in the gateway's Creem handler; NowPayments shares them.
+// adorouter's floor is 5.00: below that Creem's fixed fee eats the margin.
+const CUSTOM_MIN = 5;
 const CUSTOM_MAX = 100000;
 // PayPal is the chargeback-prone rail: preset amounts only, capped (gateway enforces it too).
 const DELOPAY_MAX = 500;
