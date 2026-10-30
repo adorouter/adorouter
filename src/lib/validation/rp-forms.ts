@@ -1,0 +1,324 @@
+import { Type as t, type Static } from "@sinclair/typebox/type";
+import { nullable, samplingNullable } from "./helpers";
+import { reasoningEffort, webSearchContextSize, webSearchEngine } from "./chat";
+import {
+  AUTO_GROUP,
+  MAX_CHAT_MEMORY,
+  msg,
+  NONE_VALUE,
+  type TranslationKey,
+} from "../config/constants";
+import {
+  LOREBOOK_INJECTION_ROLES,
+  MAX_DESC_LEN,
+  MAX_NAME_LEN,
+  type LorebookInjectionRole,
+} from "./rp";
+export { LOREBOOK_INJECTION_ROLES, type LorebookInjectionRole };
+
+export const SAMPLING_PARAMS = [
+  {
+    field: "temperature",
+    apiKey: "temperature",
+    labelKey: "RP.SAMPLING_TEMPERATURE",
+    hintKey: "RP.SAMPLING_TEMPERATURE_HINT",
+    exampleKey: "RP.SAMPLING_TEMPERATURE_EXAMPLE",
+    min: 0,
+    max: 2,
+    fallback: 1,
+  },
+  {
+    field: "topP",
+    apiKey: "top_p",
+    labelKey: "RP.SAMPLING_TOP_P",
+    hintKey: "RP.SAMPLING_TOP_P_HINT",
+    exampleKey: "RP.SAMPLING_TOP_P_EXAMPLE",
+    min: 0,
+    max: 1,
+    fallback: 1,
+  },
+  {
+    field: "topK",
+    apiKey: "top_k",
+    labelKey: "RP.SAMPLING_TOP_K",
+    hintKey: "RP.SAMPLING_TOP_K_HINT",
+    exampleKey: "RP.SAMPLING_TOP_K_EXAMPLE",
+    min: 0,
+    max: 200,
+    step: 1,
+    fallback: 0,
+  },
+  {
+    field: "minP",
+    apiKey: "min_p",
+    labelKey: "RP.SAMPLING_MIN_P",
+    hintKey: "RP.SAMPLING_MIN_P_HINT",
+    exampleKey: "RP.SAMPLING_MIN_P_EXAMPLE",
+    min: 0,
+    max: 1,
+    fallback: 0,
+  },
+  {
+    field: "topA",
+    apiKey: "top_a",
+    labelKey: "RP.SAMPLING_TOP_A",
+    hintKey: "RP.SAMPLING_TOP_A_HINT",
+    exampleKey: "RP.SAMPLING_TOP_A_EXAMPLE",
+    min: 0,
+    max: 1,
+    fallback: 0,
+  },
+  {
+    field: "frequencyPenalty",
+    apiKey: "frequency_penalty",
+    labelKey: "RP.SAMPLING_FREQUENCY_PENALTY",
+    hintKey: "RP.SAMPLING_FREQUENCY_PENALTY_HINT",
+    exampleKey: "RP.SAMPLING_FREQUENCY_PENALTY_EXAMPLE",
+    min: -2,
+    max: 2,
+    fallback: 0,
+  },
+  {
+    field: "presencePenalty",
+    apiKey: "presence_penalty",
+    labelKey: "RP.SAMPLING_PRESENCE_PENALTY",
+    hintKey: "RP.SAMPLING_PRESENCE_PENALTY_HINT",
+    exampleKey: "RP.SAMPLING_PRESENCE_PENALTY_EXAMPLE",
+    min: -2,
+    max: 2,
+    fallback: 0,
+  },
+  {
+    field: "repetitionPenalty",
+    apiKey: "repetition_penalty",
+    labelKey: "RP.SAMPLING_REPETITION_PENALTY",
+    hintKey: "RP.SAMPLING_REPETITION_PENALTY_HINT",
+    exampleKey: "RP.SAMPLING_REPETITION_PENALTY_EXAMPLE",
+    min: 0,
+    max: 2,
+    fallback: 1,
+  },
+  {
+    field: "maxTokens",
+    apiKey: "max_tokens",
+    labelKey: "RP.SAMPLING_MAX_TOKENS",
+    hintKey: "RP.SAMPLING_MAX_TOKENS_HINT",
+    exampleKey: "RP.SAMPLING_MAX_TOKENS_EXAMPLE",
+    min: 1,
+    max: 200_000,
+    step: 1,
+    fallback: 2048,
+  },
+] as const satisfies ReadonlyArray<{
+  field: string;
+  apiKey: string;
+  labelKey: TranslationKey;
+  hintKey: TranslationKey;
+  exampleKey: TranslationKey;
+  min: number;
+  max: number;
+  step?: number;
+  fallback: number;
+}>;
+
+export type SamplingParam = (typeof SAMPLING_PARAMS)[number];
+
+export type SamplingFieldName = SamplingParam["field"];
+export const SAMPLING_FIELDS: SamplingFieldName[] = SAMPLING_PARAMS.map(
+  (p) => p.field,
+);
+
+export const RP_TABS = [
+  "characters",
+  "personas",
+  "lorebooks",
+  "js-plugins",
+] as const;
+export type RpTab = (typeof RP_TABS)[number];
+
+const reasoningEffortLiterals = [
+  t.Literal(NONE_VALUE),
+  ...reasoningEffort.anyOf,
+];
+const webSearchEngineLiterals = webSearchEngine.anyOf;
+const webSearchContextSizeLiterals = webSearchContextSize.anyOf;
+
+const lorebookInjectionRoleLiterals = LOREBOOK_INJECTION_ROLES.map((r) =>
+  t.Literal(r),
+);
+
+const nullableNumber = (min: number, max: number) =>
+  nullable(t.Number({ minimum: min, maximum: max }));
+
+export const conversationOverridesFormSchema = t.Object({
+  personaId: t.String({ default: NONE_VALUE }),
+  presetId: t.String({ default: NONE_VALUE }),
+  reasoningEffort: t.Union(reasoningEffortLiterals, { default: NONE_VALUE }),
+  chatMemory: nullableNumber(1, MAX_CHAT_MEMORY),
+  authorNoteDepth: t.Number({ minimum: 0, maximum: 100, default: 4 }),
+  systemPromptOverride: t.String({ default: "" }),
+  authorNote: t.String({ default: "" }),
+  webSearchEnabled: t.Boolean({ default: false }),
+  webSearchEngine: t.Union(webSearchEngineLiterals, { default: "auto" }),
+  webSearchContextSize: t.Union(webSearchContextSizeLiterals, {
+    default: "medium",
+  }),
+  memoryEnabled: t.Boolean({ default: false }),
+  imageEnabled: t.Boolean({ default: false }),
+  utilityModel: t.String({ default: NONE_VALUE }),
+  titleModel: t.String({ default: NONE_VALUE }),
+  titlePrompt: t.String({ default: "", maxLength: 4_096 }),
+  promptInstruction: t.String({ default: "", maxLength: 4_096 }),
+  imageModel: t.String({ default: NONE_VALUE }),
+  imagePreview: t.Boolean({ default: false }),
+  useCharAvatarRef: t.Boolean({ default: false }),
+  characterIds: t.Array(t.String(), { default: [] }),
+  lorebookIds: t.Array(t.String(), { default: [] }),
+  ...samplingNullable({ maxTokensMax: 1_000_000 }),
+  extraBody: t.String({ default: "", maxLength: 8_192 }),
+  streamingEnabled: nullable(t.Boolean()),
+  autoScrollStream: nullable(t.Boolean()),
+  showReasoning: nullable(t.Boolean()),
+});
+export type ConversationOverridesForm = Static<
+  typeof conversationOverridesFormSchema
+>;
+
+export const samplingPresetFormSchema = t.Object({
+  name: t.String({
+    minLength: 1,
+    maxLength: MAX_NAME_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  ...samplingNullable({ temperatureMax: 4, maxTokensMax: 1_000_000 }),
+  streamingEnabled: nullable(t.Boolean()),
+  autoScrollStream: nullable(t.Boolean()),
+  showReasoning: nullable(t.Boolean()),
+  reasoningEffort: t.Union([...reasoningEffort.anyOf, t.Literal(NONE_VALUE)], {
+    default: NONE_VALUE,
+  }),
+  chatMemory: nullableNumber(1, MAX_CHAT_MEMORY),
+  memoryEnabled: nullable(t.Boolean()),
+  imageEnabled: nullable(t.Boolean()),
+  utilityModel: t.String({ default: "", maxLength: 256 }),
+  utilityGroup: t.String({ default: AUTO_GROUP, maxLength: 128 }),
+  titleModel: t.String({ default: "", maxLength: 256 }),
+  titleGroup: t.String({ default: AUTO_GROUP, maxLength: 128 }),
+  titlePrompt: t.String({ default: "", maxLength: 4_096 }),
+  promptInstruction: t.String({ default: "", maxLength: 4_096 }),
+  imageModel: t.String({ default: "", maxLength: 512 }),
+  imageGroup: t.String({ default: AUTO_GROUP, maxLength: 128 }),
+  imagePreview: nullable(t.Boolean()),
+  useCharAvatarRef: nullable(t.Boolean()),
+  mainPrompt: t.String({ default: "", maxLength: MAX_DESC_LEN }),
+  postHistory: t.String({ default: "", maxLength: MAX_DESC_LEN }),
+  postHistoryRole: t.Union([t.Literal("system"), t.Literal("user")], {
+    default: "system",
+  }),
+  prefill: t.String({ default: "", maxLength: MAX_DESC_LEN }),
+  continuePrompt: t.String({ default: "", maxLength: MAX_DESC_LEN }),
+  impersonatePrompt: t.String({ default: "", maxLength: MAX_DESC_LEN }),
+  tokenizer: t.String({ default: "", maxLength: 256 }),
+  providers: t.String({ default: "", maxLength: 4_096 }),
+  providersOnly: t.Boolean({ default: false }),
+  promptTemplate: t.String({ default: "", maxLength: 131_072 }),
+  forceAlternateRoles: t.Boolean({ default: false }),
+  noSystemRole: t.Boolean({ default: false }),
+  mustStartWithUserInput: t.Boolean({ default: false }),
+  geminiBlockOff: t.Boolean({ default: false }),
+  disableCaching: t.Boolean({ default: false }),
+  keepSystemRoles: t.Boolean({ default: false }),
+  isDefault: t.Boolean({ default: false }),
+});
+
+export type SamplingPresetForm = Static<typeof samplingPresetFormSchema>;
+
+export const personaFormSchema = t.Object({
+  title: t.String({ maxLength: MAX_NAME_LEN, default: "" }),
+  name: t.String({
+    minLength: 1,
+    maxLength: MAX_NAME_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  description: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  personality: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  avatarMediaId: t.Union([t.String({ maxLength: 64 }), t.Null()], {
+    default: null,
+  }),
+  isDefault: t.Boolean({ default: false }),
+});
+export type PersonaForm = Static<typeof personaFormSchema>;
+
+export const lorebookFormSchema = t.Object({
+  name: t.String({
+    minLength: 1,
+    maxLength: MAX_NAME_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  description: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  greeting: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  scanDepth: t.Number({ minimum: 0, maximum: 100, default: 4 }),
+  tokenBudget: t.Number({ minimum: 100, maximum: 1_000_000, default: 1500 }),
+  recursiveScanning: t.Boolean({ default: false }),
+});
+export type LorebookForm = Static<typeof lorebookFormSchema>;
+
+export const lorebookEntryFormSchema = t.Object({
+  comment: t.String({ maxLength: MAX_NAME_LEN, default: "" }),
+  keys: t.String({ default: "" }),
+  secondaryKeys: t.String({ default: "" }),
+  content: t.String({
+    minLength: 1,
+    maxLength: MAX_DESC_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  priority: t.Integer({ default: 100 }),
+  orderIndex: t.Integer({ default: 0 }),
+  probability: t.Number({ minimum: 0, maximum: 100, default: 100 }),
+  entryScanDepth: t.Number({ minimum: 0, maximum: 100, default: 0 }),
+  constant: t.Boolean({ default: false }),
+  selective: t.Boolean({ default: false }),
+  enabled: t.Boolean({ default: true }),
+  matchWholeWords: t.Boolean({ default: false }),
+  injectionRole: t.Union(lorebookInjectionRoleLiterals, { default: "system" }),
+});
+export type LorebookEntryForm = Static<typeof lorebookEntryFormSchema>;
+
+export const characterFormSchema = t.Object({
+  name: t.String({
+    minLength: 1,
+    maxLength: MAX_NAME_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  description: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  personality: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  scenario: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  firstMessage: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  exampleMessages: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  systemPrompt: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  postHistoryInstructions: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  tags: t.String({ default: "" }),
+  triggers: t.String({ default: "" }),
+  alwaysActive: t.Boolean({ default: true }),
+  matchWholeWords: t.Boolean({ default: false }),
+});
+export type CharacterForm = Static<typeof characterFormSchema>;
+
+export const cardFormSchema = t.Object({
+  name: t.String({
+    minLength: 1,
+    maxLength: MAX_NAME_LEN,
+    default: "",
+    error: msg("FORM.ERROR.REQUIRED"),
+  }),
+  description: t.String({ maxLength: MAX_DESC_LEN, default: "" }),
+  personaId: t.String({ default: NONE_VALUE }),
+  characterIds: t.Array(t.String(), { default: [] }),
+  lorebookIds: t.Array(t.String(), { default: [] }),
+});
+export type CardForm = Static<typeof cardFormSchema>;

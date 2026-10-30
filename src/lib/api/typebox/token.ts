@@ -1,0 +1,48 @@
+import { t } from "elysia";
+
+export const tokenSearchQuery = t.Object({
+  p: t.Optional(t.Number()),
+  page_size: t.Optional(t.Number()),
+  keyword: t.Optional(t.String()),
+  token: t.Optional(t.String()),
+});
+
+export const createTokenBody = t.Object({
+  name: t.String(),
+  remain_quota: t.Number(),
+  expired_time: t.Number(),
+  unlimited_quota: t.Boolean(),
+  model_limits_enabled: t.Boolean(),
+  model_limits: t.String(),
+  allow_ips: t.Nullable(t.String()),
+  group: t.String(),
+  cross_group_retry: t.Boolean(),
+  group_mapping: t.Optional(t.String()),
+  auto_groups: t.Optional(t.Nullable(t.Array(t.String()))),
+  allow_user_quota_query: t.Optional(t.Nullable(t.Boolean())),
+  default_reasoning_effort: t.Optional(t.String()),
+  prompt_cache: t.Optional(t.String()),
+});
+
+export const updateTokenBody = t.Object({
+  id: t.Number(),
+  status: t.Number(),
+  name: t.String(),
+  remain_quota: t.Number(),
+  expired_time: t.Number(),
+  unlimited_quota: t.Boolean(),
+  model_limits_enabled: t.Boolean(),
+  model_limits: t.String(),
+  allow_ips: t.Nullable(t.String()),
+  group: t.String(),
+  cross_group_retry: t.Boolean(),
+  group_mapping: t.Optional(t.String()),
+  auto_groups: t.Optional(t.Nullable(t.Array(t.String()))),
+  allow_user_quota_query: t.Optional(t.Nullable(t.Boolean())),
+  default_reasoning_effort: t.Optional(t.String()),
+  prompt_cache: t.Optional(t.String()),
+});
+
+export const tokenIdParams = t.Object({
+  id: t.String({ pattern: "^[0-9]{1,20}$" }),
+});

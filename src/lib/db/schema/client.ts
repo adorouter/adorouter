@@ -1,0 +1,273 @@
+import type {
+  CustomProviderFormat,
+  CustomProviderModel,
+} from "@/lib/validation/custom-provider";
+import type { TokenizerKind } from "@/lib/ai/chat/tokenizer";
+import type { JsPluginKind } from "@/lib/validation/js-plugin";
+import type {
+  ImageFormUi,
+  ImageParams,
+  ImageGenerationStatus,
+  LoraEntry,
+  ImageVisibility,
+  ReferenceEntry,
+} from "@/lib/validation/image";
+import type { ThemeImages, UserTheme } from "@/lib/theme/theme-types";
+import { uid } from "@/lib/utils/base";
+import { getTableName, sql } from "drizzle-orm";
+import {
+  type AnySQLiteColumn,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+import { timestamps } from "./shared";
+
+export const ENTITY_KINDS = [
+  "characters",
+  "personas",
+  "lorebooks",
+  "presets",
+  "cards",
+  "conversations",
+  "theme",
+] as const;
+
+export type EntityKindName = (typeof ENTITY_KINDS)[number];
+
+export type PendingSyncOp = "patch" | "delete";
+
+export type PendingTaskType = "logEnrich";
+
+export const localPendingTasks = sqliteTable(
+  "local_pending_tasks",
+  {
+    taskType: text("task_type")
+      .notNull()
+      .default("logEnrich")
+      .$type<PendingTaskType>(),
+    kind: text("kind").notNull().$type<EntityKindName | "">(),
+    id: text("id").notNull(),
+    op: text("op").notNull().$type<PendingSyncOp>(),
+    queuedAt: integer("queued_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: integer("next_attempt_at", { mode: "timestamp_ms" }),
+    lastError: text("last_error"),
+    payload: text("payload"),
+    seq: integer("seq").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskType, table.kind, table.id] }),
+    index("idx_pending_queued").on(table.queuedAt),
+  ],
+);
+
+export const customProviders = sqliteTable("custom_providers", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uid()),
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  apiKey: text("api_key").notNull().default(""),
+  format: text("format").$type<CustomProviderFormat>().notNull(),
+  // Default browser-direct, so the server never sees the user's endpoint or key.
+  proxy: integer("proxy", { mode: "boolean" }).notNull().default(false),
+  models: text("models", { mode: "json" })
+    .$type<CustomProviderModel[]>()
+    .notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export const jsPlugins = sqliteTable("js_plugins", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => uid()),
+  name: text("name").notNull(),
+  script: text("script").notNull(),
+  kind: text("kind").$type<JsPluginKind>().notNull().default("risu"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export const tokenizers = sqliteTable("tokenizers", {
+  source: text("source").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").$type<TokenizerKind>().notNull(),
+  tokenizerJson: text("tokenizer_json"),
+  tokenizerConfig: text("tokenizer_config"),
+  fetchedAt: integer("fetched_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export const localMigrations = sqliteTable("local_migrations", {
+  name: text("name").primaryKey(),
+  tag: text("tag").notNull(),
+  appliedAt: integer("applied_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export const LOCAL_ONLY_TABLES = [
+  getTableName(localMigrations),
+  getTableName(localPendingTasks),
+  getTableName(tokenizers),
+] as const;
+
+export const LOCAL_MIGRATION_KEYS = {
+  migrationVersion: "migration_version",
+} as const;
+
+export const imageModels = sqliteTable(
+  "image_models",
+  {
+    air: text("air").primaryKey(),
+    name: text("name").notNull(),
+    architecture: text("architecture"),
+    heroImage: text("hero_image"),
+    nsfwLevel: integer("nsfw_level"),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => [index("idx_image_models_last_used").on(table.lastUsedAt)],
+);
+export const imagePresets = sqliteTable(
+  "image_presets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uid()),
+    name: text("name").notNull(),
+    model: text("model").notNull(),
+    prompt: text("prompt"),
+    negativePrompt: text("negative_prompt"),
+    params: text("params", { mode: "json" }).$type<ImageParams>(),
+    loras: text("loras", { mode: "json" }).$type<LoraEntry[]>(),
+    extraParams: text("extra_params", {
+      mode: "json",
+    }).$type<ImageFormUi>(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => [index("idx_image_presets_name").on(table.name)],
+);
+
+export type ImagePreset = typeof imagePresets.$inferSelect;
+
+// Named themes the user keeps; the working theme itself lives in the cookie
+// and `user_themes` is its undo history.
+export const savedThemes = sqliteTable(
+  "saved_themes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uid()),
+    name: text("name").notNull(),
+    themeJson: text("theme_json", { mode: "json" })
+      .$type<UserTheme>()
+      .notNull(),
+    backgroundImages: text("background_images", { mode: "json" })
+      .$type<ThemeImages>()
+      .notNull()
+      .default({}),
+    ...timestamps(),
+  },
+  (table) => [index("idx_saved_themes_updated").on(table.updatedAt)],
+);
+
+export type SavedTheme = typeof savedThemes.$inferSelect;
+
+export const imageSessions = sqliteTable(
+  "image_sessions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uid()),
+    title: text("title"),
+    firstModel: text("first_model"),
+    snapshotCount: integer("snapshot_count").notNull().default(0),
+    imageCount: integer("image_count").notNull().default(0),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    index("idx_image_session_updated").on(table.updatedAt),
+    index("idx_image_session_expires").on(table.expiresAt),
+  ],
+);
+
+export const imageSnapshots = sqliteTable(
+  "image_snapshots",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uid()),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => imageSessions.id, { onDelete: "cascade" }),
+    sessionOrder: integer("session_order").notNull(),
+    // Without this a branch off an older snapshot appends at the end and the
+    // fork is invisible. Null for the first snapshot of a session.
+    parentSnapshotId: text("parent_snapshot_id").references(
+      (): AnySQLiteColumn => imageSnapshots.id,
+      { onDelete: "set null" },
+    ),
+    requestedCount: integer("requested_count").notNull().default(1),
+    taskId: text("task_id"),
+    model: text("model").notNull(),
+    prompt: text("prompt").notNull(),
+    negativePrompt: text("negative_prompt"),
+    params: text("params", { mode: "json" }).$type<ImageParams>(),
+    loras: text("loras", { mode: "json" }).$type<LoraEntry[]>(),
+    references: text("references", { mode: "json" }).$type<ReferenceEntry[]>(),
+    extraParams: text("extra_params", {
+      mode: "json",
+    }).$type<ImageFormUi>(),
+    status: text("status")
+      .notNull()
+      .default("pending")
+      .$type<ImageGenerationStatus>(),
+    progress: text("progress"),
+    costQuota: integer("cost_quota"),
+    visibility: text("visibility")
+      .notNull()
+      .default("private")
+      .$type<ImageVisibility>(),
+    flagged: integer("flagged", { mode: "boolean" }).notNull().default(false),
+    flagReason: text("flag_reason"),
+    errorMessage: text("error_message"),
+    // Set before submitting so a double-click cannot bill the same generation twice.
+    submittedKey: text("submitted_key"),
+    ...timestamps(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("idx_image_snapshot_session").on(table.sessionId, table.sessionOrder),
+    index("idx_image_snapshot_expires").on(table.expiresAt),
+    uniqueIndex("idx_image_snapshot_submitted").on(table.submittedKey),
+  ],
+);
+export type ImageSnapshot = typeof imageSnapshots.$inferSelect;

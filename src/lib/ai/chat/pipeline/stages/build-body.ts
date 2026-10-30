@@ -1,0 +1,327 @@
+import type { PricingCatalogDetail } from "@/openapi";
+import { CHAT_PROVIDER_NAME } from "@/lib/config/constants";
+import type { AssembledSystem } from "../../prompt/assembler.service";
+import { GEMINI_SAFETY_OFF, type StreamMessages } from "../transforms";
+import type { getModelRoleFlags } from "../role-flags";
+import type { StreamBody } from "../prepare.service";
+import type { BodyMutations } from "../../provider-mutations";
+
+type AutoFlags = ReturnType<typeof getModelRoleFlags>;
+
+function defined<T extends Record<string, unknown>>(o: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(o).filter(([, v]) => v !== undefined),
+  ) as Partial<T>;
+}
+
+const PARAM_API_KEY: Record<string, string> = {
+  maxOutputTokens: "max_tokens",
+  temperature: "temperature",
+  topP: "top_p",
+  topK: "top_k",
+  frequencyPenalty: "frequency_penalty",
+  presencePenalty: "presence_penalty",
+  max_tokens: "max_tokens",
+  top_p: "top_p",
+  top_k: "top_k",
+  frequency_penalty: "frequency_penalty",
+  presence_penalty: "presence_penalty",
+  min_p: "min_p",
+  top_a: "top_a",
+  repetition_penalty: "repetition_penalty",
+  seed: "seed",
+  logit_bias: "logit_bias",
+};
+
+function stripUnsupported<T extends Record<string, unknown>>(
+  o: T,
+  supported: string[] | null | undefined,
+): Partial<T> {
+  if (!supported || supported.length === 0) return o;
+  const ok = (apiKey: string) =>
+    apiKey === "max_tokens"
+      ? supported.includes("max_tokens") ||
+        supported.includes("max_completion_tokens")
+      : supported.includes(apiKey);
+  return Object.fromEntries(
+    Object.entries(o).filter(([k]) => {
+      const apiKey = PARAM_API_KEY[k];
+      return apiKey ? ok(apiKey) : true;
+    }),
+  ) as Partial<T>;
+}
+
+export function buildModelParams(
+  assembled: AssembledSystem,
+  effectiveMaxOutputTokens: number,
+  modelInfo: PricingCatalogDetail | undefined,
+) {
+  // Only put max_tokens on the wire when the user asked for one. Metadata
+  // output ceilings drift from what upstreams enforce (262144 published against
+  // a 131072 limit, on the same model), and a too-high literal is a hard 400 on
+  // strict providers, so an absent field is safer than a computed one. The
+  // gateway fills in the model's own cap when nothing arrives.
+  const userSetMax = assembled.sampling.maxOutputTokens != null;
+  return stripUnsupported(
+    defined({
+      maxOutputTokens: userSetMax
+        ? effectiveMaxOutputTokens || undefined
+        : undefined,
+      temperature: assembled.sampling.temperature,
+      topP: assembled.sampling.topP,
+      topK: assembled.sampling.topK,
+      frequencyPenalty: assembled.sampling.frequencyPenalty,
+      presencePenalty: assembled.sampling.presencePenalty,
+    }),
+    modelInfo?.metadata?.supportedParameters,
+  );
+}
+
+export function buildProviderOptions(
+  assembled: AssembledSystem,
+  autoFlags: AutoFlags,
+  modelInfo: PricingCatalogDetail | undefined,
+) {
+  const safeExtraBody =
+    modelInfo?.is_free && assembled.extraBody
+      ? Object.fromEntries(
+          Object.entries(assembled.extraBody).filter(
+            ([k]) =>
+              ![
+                "max_tokens",
+                "max_completion_tokens",
+                "maxOutputTokens",
+                "max_output_tokens",
+              ].includes(k),
+          ),
+        )
+      : assembled.extraBody;
+
+  return {
+    // openai-compatible reads providerOptions ONLY under its provider name; any
+    // other key is silently dropped and never reaches the wire.
+    [CHAT_PROVIDER_NAME]: {
+      ...stripUnsupported(
+        safeExtraBody ?? {},
+        modelInfo?.metadata?.supportedParameters,
+      ),
+      ...stripUnsupported(
+        defined({
+          min_p: assembled.sampling.minP,
+          top_a: assembled.sampling.topA,
+          repetition_penalty: assembled.sampling.repetitionPenalty,
+        }),
+        modelInfo?.metadata?.supportedParameters,
+      ),
+      ...defined({
+        // camelCase only: the sdk maps this to reasoning_effort on the wire and
+        // does not recognize the snake_case name.
+        reasoningEffort:
+          autoFlags.effortCapHigh &&
+          (assembled.reasoningEffort === "xhigh" ||
+            assembled.reasoningEffort === "max")
+            ? "high"
+            : assembled.reasoningEffort,
+        safetySettings: assembled.flags.geminiBlockOff
+          ? autoFlags.noCivilIntegrity
+            ? GEMINI_SAFETY_OFF.filter(
+                (s) => s.category !== "HARM_CATEGORY_CIVIC_INTEGRITY",
+              )
+            : GEMINI_SAFETY_OFF
+          : undefined,
+        provider: assembled.providerRouting,
+      }),
+    },
+  };
+}
+
+export function buildBodyMutations(
+  assembled: AssembledSystem,
+  autoFlags: AutoFlags,
+  modelInfo: PricingCatalogDetail | undefined,
+  deepSeekReasoningContent: string | undefined,
+): BodyMutations {
+  const effort = assembled.reasoningEffort;
+  return {
+    injectCacheControl:
+      modelInfo?.metadata?.supportsCache === true &&
+      autoFlags.cacheControl &&
+      !assembled.flags.disableCaching,
+    cacheBust: assembled.flags.disableCaching || undefined,
+    deepSeekPrefix: autoFlags.deepSeekPrefix || undefined,
+    deepSeekReasoningContent,
+    deepSeekThinking:
+      autoFlags.deepSeekThinkingToggle && effort != null
+        ? {
+            enabled: effort !== "none",
+            effort:
+              effort === "xhigh"
+                ? "high"
+                : effort === "minimal"
+                  ? "low"
+                  : effort === "none"
+                    ? "high"
+                    : effort,
+          }
+        : undefined,
+    claudeAdaptive:
+      autoFlags.claudeAdaptiveThinking &&
+      (effort === "high" || effort === "xhigh" || effort === "max")
+        ? {
+            effort:
+              effort !== "high" && autoFlags.claudeXHighEffort
+                ? effort
+                : "high",
+          }
+        : undefined,
+  };
+}
+
+export function buildWritebacks(
+  assembled: AssembledSystem,
+  storedVars: string | null | undefined,
+  globalVarsIn: string | null,
+) {
+  const emptyObj = JSON.stringify({});
+  const varsOut = JSON.stringify(assembled.vars.vars);
+  const varsWriteback = varsOut !== (storedVars ?? emptyObj) ? varsOut : null;
+  const globalVarsOut = JSON.stringify(assembled.vars.globalVars ?? {});
+  const globalVarsWriteback =
+    globalVarsOut !== (globalVarsIn ?? emptyObj) ? globalVarsOut : null;
+  return { varsWriteback, globalVarsWriteback };
+}
+
+// Request logs are per-message and grow quadratically with thread length; an
+// inline `data:` URI (3-4MB parts measured) drives the DB past 500MB, where it
+// can no longer be exported or imported on a phone. Text is kept whole: the
+// log is the only way to see what went upstream, and retention already empties
+// all but the newest payloads per conversation.
+const DATA_URI_IN_TEXT = /data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g;
+
+function leanParts(parts: unknown): unknown {
+  if (!Array.isArray(parts)) return parts;
+  return parts.map((part) => {
+    if (!part || typeof part !== "object") return part;
+    const out: Record<string, unknown> = { ...part };
+    for (const key of ["url", "data", "image", "text"]) {
+      const v = out[key];
+      if (typeof v !== "string") continue;
+      if (v.startsWith("data:")) {
+        out[key] =
+          `${v.slice(0, v.indexOf(",") + 1)}<${v.length} bytes elided>`;
+      } else if (v.includes(";base64,")) {
+        // Gate on a substring, not regex.test: a /g regex carries lastIndex
+        // between calls and would skip matches on later strings.
+        out[key] = v.replace(
+          DATA_URI_IN_TEXT,
+          (m) => `${m.slice(0, m.indexOf(",") + 1)}<${m.length} bytes elided>`,
+        );
+      }
+    }
+    return out;
+  });
+}
+
+export function buildDebugSnapshot(
+  body: StreamBody,
+  effectiveSystem: string | undefined,
+  messagesForUpstream: StreamMessages,
+  target?: { endpoint: string; url: string },
+  assembled?: AssembledSystem,
+  autoFlags?: AutoFlags,
+  modelInfo?: PricingCatalogDetail,
+  historyStats?: Record<string, unknown>,
+  tokenizer?: { source: string; exact: boolean },
+  wire?: {
+    modelParams: Record<string, unknown>;
+    providerOptions: Record<string, unknown>;
+  },
+) {
+  const ctx = body.chatContext;
+  const leanMessages = messagesForUpstream.map((m) => ({
+    role: m.role,
+    parts: leanParts(m.parts),
+  }));
+  const preset = ctx?.preset;
+  return {
+    // After the supported-parameter strip; `settings.sampling` below is what
+    // the user configured.
+    sent: wire
+      ? {
+          modelParams: wire.modelParams,
+          providerOptions: wire.providerOptions[CHAT_PROVIDER_NAME] ?? {},
+        }
+      : null,
+    settings: {
+      sampling: assembled?.sampling,
+      flags: assembled?.flags,
+      autoFlags,
+      reasoningEffort: assembled?.reasoningEffort ?? null,
+      chatMemory: assembled?.chatMemory ?? null,
+      streamingEnabled: assembled?.streamingEnabled ?? null,
+      maxOutputTokens: assembled?.sampling.maxOutputTokens ?? null,
+      authorNote: assembled?.authorNote
+        ? { depth: assembled.authorNote.depth, role: assembled.authorNote.role }
+        : null,
+      prefill: assembled?.prefill ?? null,
+      extraBody: assembled?.extraBody ?? null,
+      providerRouting: assembled?.providerRouting ?? null,
+      tokenizer: tokenizer?.source ?? null,
+      // false = tokenizer load failed, counts are ~4 chars/token.
+      tokenizerExact: tokenizer?.exact ?? null,
+      promptTokens: assembled?.promptTokens ?? null,
+      promptPartKinds: assembled?.promptParts.map((p) => p.kind) ?? null,
+      preset: preset
+        ? {
+            name: preset.name ?? null,
+            hasMainPrompt: Boolean(preset.mainPrompt),
+            hasPostHistory: Boolean(preset.postHistory),
+            postHistoryRole: preset.postHistoryRole ?? null,
+            hasPromptTemplate: Boolean(preset.promptTemplate),
+            hasPrefill: Boolean(preset.prefill),
+          }
+        : null,
+    },
+    history: historyStats ?? null,
+    model: modelInfo
+      ? {
+          contextWindow: modelInfo.metadata?.contextWindow ?? null,
+          maxOutputTokens: modelInfo.metadata?.maxOutputTokens ?? null,
+          supportedParameters: modelInfo.metadata?.supportedParameters ?? null,
+          isFree: modelInfo.is_free ?? null,
+        }
+      : null,
+    requestBody: {
+      model: body.model,
+      messagesCount: body.messages.length,
+      chatContext: ctx
+        ? {
+            characters: (ctx.characters ?? []).length,
+            lorebooks: (ctx.lorebooks ?? []).length,
+            lorebookEntries: (ctx.lorebooks ?? []).reduce(
+              (n, l) => n + (l.entries?.length ?? 0),
+              0,
+            ),
+            hasPersona: ctx.persona != null,
+            hasPreset: ctx.preset != null,
+          }
+        : undefined,
+      overrides: body.overrides,
+      webSearch: body.webSearch,
+      convId: body.convId,
+    },
+    assembledSystem: effectiveSystem || null,
+    finalMessages: leanMessages,
+    endpoint: target?.endpoint ?? null,
+    url: target?.url ?? null,
+  };
+}
+
+export function makeCostEstimator(modelInfo: PricingCatalogDetail | undefined) {
+  return (inputTokens: number, outputTokens: number): number =>
+    modelInfo && !modelInfo.is_free
+      ? (inputTokens * modelInfo.input_price +
+          outputTokens * modelInfo.output_price) /
+        1_000_000
+      : 0;
+}

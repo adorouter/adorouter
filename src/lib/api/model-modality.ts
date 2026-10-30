@@ -1,0 +1,170 @@
+import { formatPrice } from "@/lib/utils/format/number";
+import type { ModelMetadata } from "@/openapi";
+
+type ModalityModel = { type: string; metadata?: ModelMetadata };
+
+export const EMPTY_METADATA: ModelMetadata = { releaseTs: 0 };
+type PricedModel = ModalityModel &
+  (
+    | {
+        is_fixed_price: boolean;
+        input_price: number;
+        output_price: number;
+        fixed_price: number;
+        original_input_price?: number | null;
+        original_output_price?: number | null;
+        original_fixed_price?: number | null;
+      }
+    | {
+        isFixedPrice: boolean;
+        inputPrice: number;
+        outputPrice: number;
+        fixedPrice: number;
+        originalInputPrice: number | null;
+        originalOutputPrice: number | null;
+        originalFixedPrice: number | null;
+      }
+  );
+
+export const OUTPUT_MODALITIES = [
+  "all",
+  "text",
+  "image",
+  "audio",
+  "video",
+  "embeddings",
+  "decisions",
+] as const;
+export type OutputModality = (typeof OUTPUT_MODALITIES)[number];
+
+export const AGE_STEPS_DAYS = [0, 7, 30, 90, 365] as const;
+
+// Per-call pricing splits a model into a per-token base and a `:flat` twin.
+export const isFlatVariant = (model: { model_name: string }): boolean =>
+  model.model_name.endsWith(":flat");
+
+type ConcreteModality = Exclude<OutputModality, "all">;
+
+// `type` and outputModalities have each been wrong upstream, so either one alone
+// classifies (gpt-4o-image reports modality `text`).
+export function deriveOutputModality(model: ModalityModel): ConcreteModality {
+  if (model.type === "embedding") return "embeddings";
+  const out = model.metadata?.outputModalities ?? [];
+  if (out.includes("decisions")) return "decisions";
+  if (model.type === "image" || out.includes("image")) return "image";
+  if (model.type === "video" || out.includes("video")) return "video";
+  if (model.type === "audio" || out.includes("audio")) return "audio";
+  return "text";
+}
+
+export function matchesModality(
+  model: ModalityModel,
+  selected: OutputModality,
+): boolean {
+  return selected === "all" || deriveOutputModality(model) === selected;
+}
+
+export function countByOutputModality(
+  models: ModalityModel[],
+): Record<ConcreteModality, number> {
+  const counts: Record<ConcreteModality, number> = {
+    text: 0,
+    image: 0,
+    audio: 0,
+    video: 0,
+    embeddings: 0,
+    decisions: 0,
+  };
+  for (const model of models) counts[deriveOutputModality(model)]++;
+  return counts;
+}
+
+export type PriceUnit = "perM" | "perImage" | "perSecond" | "perChars" | "dash";
+
+// A fixed-price model carries ONE price: image/video bill it per output artifact,
+// everything else per input.
+export function modelPriceColumns(model: PricedModel) {
+  const modality = deriveOutputModality(model);
+  const onOutput = modality === "image" || modality === "video";
+  const p =
+    "is_fixed_price" in model
+      ? {
+          fixed: model.is_fixed_price,
+          input: model.input_price,
+          output: model.output_price,
+          flat: model.fixed_price,
+          origInput: model.original_input_price ?? null,
+          origOutput: model.original_output_price ?? null,
+          origFlat: model.original_fixed_price ?? null,
+        }
+      : {
+          fixed: model.isFixedPrice,
+          input: model.inputPrice,
+          output: model.outputPrice,
+          flat: model.fixedPrice,
+          origInput: model.originalInputPrice,
+          origOutput: model.originalOutputPrice,
+          origFlat: model.originalFixedPrice,
+        };
+  if (!p.fixed)
+    return {
+      input: p.input,
+      output: p.output,
+      originalInput: p.origInput,
+      originalOutput: p.origOutput,
+    };
+  return {
+    input: onOutput ? 0 : p.flat,
+    output: onOutput ? p.flat : 0,
+    originalInput: onOutput ? null : p.origFlat,
+    originalOutput: onOutput ? p.origFlat : null,
+  };
+}
+
+export function fmtUnit(
+  value: number,
+  unit: PriceUnit,
+  perCall?: boolean,
+): string {
+  if (unit === "dash" || value <= 0) return "-";
+  if (unit === "perImage") return `${formatPrice(value)}/img`;
+  if (unit === "perSecond") return `${formatPrice(value)}/s`;
+  if (perCall) return `${formatPrice(value)}/call`;
+  return formatPrice(value);
+}
+
+export function outputPriceUnit(
+  modality: OutputModality,
+  isFixedPrice?: boolean,
+): PriceUnit {
+  switch (modality) {
+    case "image":
+      return isFixedPrice ? "perImage" : "perM";
+    case "video":
+      return isFixedPrice ? "perSecond" : "perM";
+    case "embeddings":
+      return "dash";
+    case "audio":
+      return "perChars";
+    default:
+      return "perM";
+  }
+}
+
+export function fixedPriceUnitLabel(
+  model: ModalityModel,
+): "second" | "image" | "request" {
+  const modality = deriveOutputModality(model);
+  if (modality === "video") return "second";
+  if (modality === "image") return "image";
+  return "request";
+}
+
+export function inputPriceUnit(
+  modality: OutputModality,
+  isFixedPrice?: boolean,
+): PriceUnit {
+  return isFixedPrice && (modality === "image" || modality === "video")
+    ? "dash"
+    : "perM";
+}

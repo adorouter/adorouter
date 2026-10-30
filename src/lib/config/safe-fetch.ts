@@ -1,0 +1,373 @@
+import { markAiGenerated } from "@/lib/ai/image/ai-mark";
+import { msg } from "@/lib/config/constants";
+import { env } from "@/lib/config/env";
+import { fileTypeFromBuffer } from "file-type";
+import ipaddr from "ipaddr.js";
+import { lookup as dnsLookup } from "node:dns";
+import { lookup as dnsLookupAll } from "node:dns/promises";
+import {
+  Agent,
+  fetch as undiciFetch,
+  type Response as UndiciResponse,
+} from "undici";
+
+// SSRF-safe remote fetch toolkit. Mandatory for any remote fetch.
+
+const BLOCKED_HOSTS = new Set([
+  "localhost",
+  "metadata.google.internal",
+  "metadata.goog",
+]);
+// Our own zones are never a legitimate target for a caller-supplied URL: the app
+// reaches the gateway and the bot directly. A request that leaves through a node
+// address arrives at the gateway as trusted with the caller's address lost, which
+// turned custom-forward into an anonymous relay for probing every host we run.
+const OWN_DOMAINS = [
+  ...new Set(
+    [env.apiOrigin, env.siteOrigin].map((o) =>
+      new URL(o).hostname.split(".").slice(-2).join("."),
+    ),
+  ),
+];
+function isOwnHost(host: string): boolean {
+  return OWN_DOMAINS.some((d) => host === d || host.endsWith("." + d));
+}
+const DOWNLOAD_TIMEOUT = 10_000;
+const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024;
+const ALLOWED_MEDIA_PREFIXES = ["video/", "image/", "audio/"];
+const ALLOWED_DOCUMENT_MIMES = new Set(["application/pdf"]);
+const ALLOWED_PORTS = new Set([80, 443]);
+
+const BLOCKED_IPV4_CIDRS: [ipaddr.IPv4, number][] = [
+  "0.0.0.0/8",
+  "10.0.0.0/8",
+  "100.64.0.0/10",
+  "127.0.0.0/8",
+  "169.254.0.0/16",
+  "172.16.0.0/12",
+  "192.0.0.0/24",
+  "192.0.2.0/24",
+  "192.168.0.0/16",
+  "198.18.0.0/15",
+  "198.51.100.0/24",
+  "203.0.113.0/24",
+  "224.0.0.0/4",
+  "240.0.0.0/4",
+  "255.255.255.255/32",
+].map((c) => ipaddr.IPv4.parseCIDR(c));
+
+const BLOCKED_IPV6_CIDRS: [ipaddr.IPv6, number][] = [
+  "::/96",
+  "::/128",
+  "::1/128",
+  "::ffff:0:0/96",
+  "64:ff9b::/96",
+  "64:ff9b:1::/48",
+  "100::/64",
+  "2001::/23",
+  "2001:db8::/32",
+  "2002::/16",
+  "fc00::/7",
+  "fe80::/10",
+  "ff00::/8",
+].map((c) => ipaddr.IPv6.parseCIDR(c));
+
+function isPublicIp(ip: string): boolean {
+  if (!ipaddr.isValid(ip)) return false;
+  const parsed = ipaddr.parse(ip);
+  if (parsed instanceof ipaddr.IPv4) {
+    for (const cidr of BLOCKED_IPV4_CIDRS) {
+      if (parsed.match(cidr)) return false;
+    }
+    return true;
+  }
+  const v6 = parsed;
+  if (v6.isIPv4MappedAddress()) {
+    return isPublicIp(v6.toIPv4Address().toString());
+  }
+  for (const cidr of BLOCKED_IPV6_CIDRS) {
+    if (v6.match(cidr)) return false;
+  }
+  return true;
+}
+
+const filteringLookup: typeof dnsLookup = ((
+  hostname: string,
+  options: unknown,
+  callback: unknown,
+) => {
+  const cb = (typeof options === "function" ? options : callback) as (
+    err: NodeJS.ErrnoException | null,
+    address?: string | { address: string; family: number }[],
+    family?: number,
+  ) => void;
+  const opts = (typeof options === "function" ? {} : options) as {
+    all?: boolean;
+    family?: number;
+    hints?: number;
+  };
+  dnsLookup(hostname, { ...opts, all: true, verbatim: true }, (err, addrs) => {
+    if (err) return cb(err);
+    const list = Array.isArray(addrs) ? addrs : [];
+    for (const a of list) {
+      if (!isPublicIp(a.address)) {
+        return cb(
+          Object.assign(new Error(msg("ERRORS.BLOCKED_URL")), {
+            code: "EBLOCKED",
+          }),
+        );
+      }
+    }
+    if (opts.all) return cb(null, list);
+    const first = list[0];
+    if (!first) return cb(new Error(msg("ERRORS.BLOCKED_URL")));
+    cb(null, first.address, first.family);
+  });
+}) as typeof dnsLookup;
+
+const safeAgent = new Agent({
+  connect: { lookup: filteringLookup },
+  headersTimeout: DOWNLOAD_TIMEOUT,
+  bodyTimeout: DOWNLOAD_TIMEOUT,
+});
+
+async function parseAndCheckUrl(url: string): Promise<URL> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(msg("ERRORS.INVALID_URL"));
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  const port = parsed.port
+    ? Number(parsed.port)
+    : parsed.protocol === "https:"
+      ? 443
+      : 80;
+  if (!ALLOWED_PORTS.has(port)) {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  // URL keeps IPv6 literals bracketed, so "[::ffff:169.254.169.254]" skipped the IP
+  // check and reached the metadata service (2026-10-04).
+  const host = parsed.hostname.toLowerCase().replace(/^\[(.*)\]$/, "$1");
+  // A trailing dot names the same host to DNS and to Cloudflare but not to a
+  // suffix match; "api.unorouter.com." walked past isOwnHost (2026-09-07).
+  // The public gateway is never a valid target either, whatever the caller
+  // says it is testing: a request from a node address reaches it as trusted
+  // with the caller's identity lost.
+  if (
+    host.endsWith(".") ||
+    BLOCKED_HOSTS.has(host) ||
+    host.endsWith(".internal") ||
+    isOwnHost(host)
+  ) {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  if (ipaddr.isValid(host)) {
+    if (!isPublicIp(host)) throw new Error(msg("ERRORS.BLOCKED_URL"));
+    return parsed;
+  }
+  // filteringLookup only runs while undici is bundled: Bun resolving "undici" itself
+  // swaps in its native fetch and drops the dispatcher, so the name is checked here too.
+  let addrs: { address: string }[];
+  try {
+    addrs = await dnsLookupAll(host, { all: true, verbatim: true });
+  } catch {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  if (!addrs.length || addrs.some((a) => !isPublicIp(a.address))) {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  return parsed;
+}
+
+// Separate agent for SSE: the download agent's 10s body timeout would kill any
+// longer generation. Headers still time out, so a dead host cannot hang open.
+// Busy hosts queue well past 30s before answering; Cloudflare's 100s origin
+// read timeout is the real ceiling.
+const safeStreamAgent = new Agent({
+  connect: { lookup: filteringLookup },
+  headersTimeout: 90_000,
+  bodyTimeout: 0,
+});
+
+// Returns the live response for piping. Redirects are refused so the URL/DNS
+// policy cannot be bypassed by a hop.
+export async function safeFetchStream(
+  url: string,
+  opts: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    signal?: AbortSignal;
+  } = {},
+): Promise<UndiciResponse> {
+  await parseAndCheckUrl(url);
+  const res = await undiciFetch(url, {
+    method: opts.method ?? "GET",
+    headers: opts.headers,
+    body: opts.body,
+    signal: opts.signal,
+    dispatcher: safeStreamAgent,
+    redirect: "manual",
+  });
+  if (res.status >= 300 && res.status < 400) {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  return res;
+}
+
+async function safeFetch(
+  url: string,
+  opts: {
+    method?: "GET" | "POST";
+    headers?: Record<string, string>;
+    body?: string;
+  } = {},
+): Promise<{ res: UndiciResponse; deadline: number }> {
+  await parseAndCheckUrl(url);
+  const deadline = Date.now() + DOWNLOAD_TIMEOUT;
+  const res = await undiciFetch(url, {
+    method: opts.method ?? "GET",
+    headers: opts.headers,
+    body: opts.body,
+    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT),
+    dispatcher: safeAgent,
+    redirect: "manual",
+  });
+  if (res.status >= 300 && res.status < 400) {
+    throw new Error(msg("ERRORS.BLOCKED_URL"));
+  }
+  return { res, deadline };
+}
+
+// On Bun a read never settles once the abort fires after the headers arrived,
+// so each read races the deadline the request started with.
+async function readBefore(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  deadline: number,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(msg("ERRORS.UPSTREAM_FETCH_FAILED"))),
+      Math.max(0, deadline - Date.now()),
+    );
+  });
+  try {
+    return await Promise.race([reader.read(), expired]);
+  } catch (err) {
+    reader.cancel().catch(() => {});
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readBodyWithLimit(
+  res: UndiciResponse,
+  maxBytes: number,
+  deadline: number,
+): Promise<Buffer> {
+  const declared = Number(res.headers.get("content-length") ?? "0");
+  if (declared && declared > maxBytes) {
+    throw new Error(msg("ERRORS.RESPONSE_TOO_LARGE"));
+  }
+  const reader = res.body?.getReader();
+  if (!reader) return Buffer.alloc(0);
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const next = await readBefore(reader, deadline);
+    if (next.done) break;
+    total += next.value.byteLength;
+    if (total > maxBytes) {
+      reader.cancel().catch(() => {});
+      throw new Error(msg("ERRORS.RESPONSE_TOO_LARGE"));
+    }
+    chunks.push(next.value);
+  }
+  return Buffer.concat(chunks);
+}
+
+export async function safeFetchBytes(
+  url: string,
+  maxBytes: number,
+): Promise<{ buffer: Buffer; contentType: string | null }> {
+  const { res, deadline } = await safeFetch(url);
+  if (!res.ok) {
+    throw new Error(msg("ERRORS.UPSTREAM_FETCH_FAILED"));
+  }
+  return {
+    buffer: await readBodyWithLimit(res, maxBytes, deadline),
+    contentType: res.headers.get("content-type"),
+  };
+}
+
+export async function safeFetchRaw(
+  url: string,
+  opts: {
+    method?: "GET" | "POST";
+    headers?: Record<string, string>;
+    body?: string;
+    maxBytes?: number;
+  } = {},
+): Promise<{ buffer: Buffer; contentType: string | null; status: number }> {
+  const { res, deadline } = await safeFetch(url, opts);
+  const buffer = await readBodyWithLimit(
+    res,
+    opts.maxBytes ?? MAX_DOWNLOAD_BYTES,
+    deadline,
+  );
+  return {
+    buffer,
+    contentType: res.headers.get("content-type"),
+    status: res.status,
+  };
+}
+
+export async function verifyMagicBytes(
+  body: Buffer | Uint8Array,
+  declaredCt?: string,
+): Promise<string> {
+  const detected = await fileTypeFromBuffer(body);
+  if (!detected) throw new Error(msg("ERRORS.DISALLOWED_CONTENT_TYPE"));
+  const isMedia = ALLOWED_MEDIA_PREFIXES.some((p) =>
+    detected.mime.startsWith(p),
+  );
+  const isDocument = ALLOWED_DOCUMENT_MIMES.has(detected.mime);
+  if (!isMedia && !isDocument) {
+    throw new Error(msg("ERRORS.DISALLOWED_CONTENT_TYPE"));
+  }
+  if (declaredCt && declaredCt !== detected.mime) {
+    const sameCategory =
+      isMedia && declaredCt.split("/")[0] === detected.mime.split("/")[0];
+    if (!sameCategory) {
+      throw new Error(msg("ERRORS.DISALLOWED_CONTENT_TYPE"));
+    }
+  }
+  return detected.mime;
+}
+
+// The mime comes from the BYTES, never from the header or data: prefix: a
+// backend declaring image/png for an html error page must fail here, not
+// after the payload is persisted and rendered.
+export async function downloadGenerationBytes(
+  url: string,
+): Promise<{ buffer: Buffer; mime: string; sizeBytes: number }> {
+  if (url.startsWith("data:")) {
+    const base64 = url.split(",")[1] ?? "";
+    const buffer = markAiGenerated(Buffer.from(base64, "base64"));
+    const mime = await verifyMagicBytes(buffer);
+    return { buffer, mime, sizeBytes: buffer.length };
+  }
+  const { res, deadline } = await safeFetch(url);
+  if (!res.ok) throw new Error(msg("ERRORS.UPSTREAM_FETCH_FAILED"));
+  const buffer = markAiGenerated(
+    await readBodyWithLimit(res, MAX_DOWNLOAD_BYTES, deadline),
+  );
+  const mime = await verifyMagicBytes(buffer);
+  return { buffer, mime, sizeBytes: buffer.length };
+}

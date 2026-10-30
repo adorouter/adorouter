@@ -1,0 +1,418 @@
+import { countTokens } from "@/lib/ai/chat/tokenizer";
+import { MAX_RECURSIVE_LOREBOOK_PASSES } from "@/lib/config/constants";
+import type { LbEntry, LbRow } from "@/lib/types";
+import { clamp, escapeRegex } from "@/lib/utils/base";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import { seededRand } from "@/lib/ai/chat/calc";
+
+function stripComments(text: string): string {
+  return text
+    .replace(/\{\{\/\/(.+?)\}\}/g, "")
+    .replace(/\{\{comment:(.+?)\}\}/g, "");
+}
+
+const KEY_RE_CACHE = new Map<string, RegExp | null>();
+function compiledKey(cacheKey: string, build: () => RegExp): RegExp | null {
+  let re = KEY_RE_CACHE.get(cacheKey);
+  if (re === undefined) {
+    try {
+      re = build();
+    } catch {
+      re = null;
+    }
+    if (KEY_RE_CACHE.size > 2000) KEY_RE_CACHE.clear();
+    KEY_RE_CACHE.set(cacheKey, re);
+  }
+  return re;
+}
+
+export function keyHits(
+  key: string,
+  text: string,
+  wholeWords: boolean,
+): boolean {
+  if (!key) return false;
+  if (key.startsWith("/") && key.lastIndexOf("/") > 0) {
+    const lastSlash = key.lastIndexOf("/");
+    const re = compiledKey(
+      `r:${key}`,
+      () => new RegExp(key.slice(1, lastSlash), key.slice(lastSlash + 1)),
+    );
+    return re ? re.test(text) : false;
+  }
+  const cleaned = stripComments(text);
+  if (wholeWords) {
+    const re = compiledKey(
+      `w:${key}`,
+      () => new RegExp(`\\b${escapeRegex(key)}\\b`, "i"),
+    );
+    return re ? re.test(cleaned) : false;
+  }
+  return cleaned
+    .toLowerCase()
+    .replace(/ /g, "")
+    .includes(key.toLowerCase().replace(/ /g, ""));
+}
+
+export type EntryDecorators = {
+  body: string;
+  probability?: number;
+  priority?: number;
+  order?: number;
+  scanDepth?: number;
+  additionalKeys?: string[];
+  excludeKeys?: string[];
+  excludeKeysAll?: string[];
+  role?: "user" | "assistant" | "system";
+  matchWholeWords?: boolean;
+  forceState?: "activate" | "deactivate";
+  keepActivateAfterMatch?: boolean;
+  dontActivateAfterMatch?: boolean;
+  activateOnlyAfter?: number;
+  activateOnlyEvery?: number;
+  isGreeting?: number;
+  recursive?: boolean;
+  noRecursiveSearch?: boolean;
+  ignoreOnMaxContext?: boolean;
+  inject?: {
+    operation: "append" | "prepend" | "replace";
+    location: string;
+    lore: boolean;
+  };
+  disableUiPrompt?: ("system_prompt" | "post_history_instructions")[];
+};
+
+const DECORATOR_LINE = /^@@(\w+)[ \t]*(.*)$/;
+const csv = (s: string) =>
+  s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+export function parseDecorators(content: string): EntryDecorators {
+  const out: EntryDecorators = { body: content };
+  if (!content.includes("@@")) return out;
+  const lines = content.split("\n");
+  let i = 0;
+  for (; i < lines.length; i++) {
+    const m = DECORATOR_LINE.exec(lines[i].trim());
+    if (!m) break; // decorators must lead; first non-decorator line ends them
+    const name = m[1].toLowerCase();
+    const arg = m[2].trim();
+    const num = Number(arg);
+    switch (name) {
+      case "probability":
+        if (Number.isFinite(num)) out.probability = clamp(num, 0, 100);
+        break;
+      case "priority":
+        if (Number.isFinite(num)) out.priority = num;
+        break;
+      case "order":
+      case "insertorder":
+        if (Number.isFinite(num)) out.order = num;
+        break;
+      case "scan_depth":
+        if (Number.isFinite(num) && num > 0) out.scanDepth = num;
+        break;
+      case "additional_keys":
+        out.additionalKeys = csv(arg);
+        break;
+      case "exclude_keys":
+        out.excludeKeys = csv(arg);
+        break;
+      case "exclude_keys_all":
+        out.excludeKeysAll = csv(arg);
+        break;
+      case "role":
+        if (arg === "user" || arg === "assistant" || arg === "system")
+          out.role = arg;
+        break;
+      case "match_full_word":
+        out.matchWholeWords = true;
+        break;
+      case "match_partial_word":
+        out.matchWholeWords = false;
+        break;
+      case "activate":
+        out.forceState = "activate";
+        break;
+      case "dont_activate":
+        out.forceState = "deactivate";
+        break;
+      case "keep_activate_after_match":
+        out.keepActivateAfterMatch = true;
+        break;
+      case "dont_activate_after_match":
+        out.dontActivateAfterMatch = true;
+        break;
+      case "activate_only_after":
+        if (Number.isFinite(num)) out.activateOnlyAfter = num;
+        break;
+      case "activate_only_every":
+        if (Number.isFinite(num) && num > 0) out.activateOnlyEvery = num;
+        break;
+      case "is_greeting":
+        if (Number.isFinite(num)) out.isGreeting = num;
+        break;
+      case "recursive":
+        out.recursive = true;
+        break;
+      case "unrecursive":
+        out.recursive = false;
+        break;
+      case "no_recursive_search":
+        out.noRecursiveSearch = true;
+        break;
+      case "ignore_on_max_context":
+        out.ignoreOnMaxContext = true;
+        break;
+      case "inject_lore":
+        out.inject = { operation: "append", location: arg, lore: true };
+        break;
+      case "inject_at":
+        out.inject = { operation: "append", location: arg, lore: false };
+        break;
+      case "inject_replace":
+        out.inject = {
+          operation: "replace",
+          location: out.inject?.location ?? arg,
+          lore: out.inject?.lore ?? false,
+        };
+        break;
+      case "inject_prepend":
+        out.inject = {
+          operation: "prepend",
+          location: out.inject?.location ?? arg,
+          lore: out.inject?.lore ?? false,
+        };
+        break;
+      case "disable_ui_prompt":
+        if (arg === "system_prompt" || arg === "post_history_instructions") {
+          (out.disableUiPrompt ??= []).push(arg);
+        }
+        break;
+      default:
+        break; // unknown decorator: line consumed, no effect
+    }
+  }
+  out.body = lines.slice(i).join("\n");
+  return out;
+}
+
+type Prepared = {
+  entry: LbEntry;
+  dec: EntryDecorators;
+  scanText: string; // book scanDepth slice, per entry
+  effectivePriority: number;
+  probPass: boolean;
+};
+
+function entryMatches(p: Prepared, text: string): boolean {
+  const e = p.entry;
+  const whole = p.dec.matchWholeWords ?? !!e.matchWholeWords;
+
+  if (p.dec.excludeKeys?.some((k) => keyHits(k, text, whole))) return false;
+  if (
+    p.dec.excludeKeysAll &&
+    p.dec.excludeKeysAll.length > 0 &&
+    p.dec.excludeKeysAll.every((k) => keyHits(k, text, whole))
+  ) {
+    return false;
+  }
+
+  if (e.constant) return true;
+
+  const keys = e.keys ?? [];
+  if (!keys.some((k) => keyHits(k, text, whole))) return false;
+
+  if (
+    p.dec.additionalKeys &&
+    p.dec.additionalKeys.length > 0 &&
+    !p.dec.additionalKeys.some((k) => keyHits(k, text, whole))
+  ) {
+    return false;
+  }
+
+  if (e.selective) {
+    const sec = e.secondaryKeys ?? [];
+    return sec.length === 0 || sec.some((k) => keyHits(k, text, whole));
+  }
+  return true;
+}
+
+function passesChatGates(
+  dec: EntryDecorators,
+  chatLength: number,
+  greetingIndex: number,
+): boolean {
+  if (dec.activateOnlyAfter !== undefined && chatLength < dec.activateOnlyAfter)
+    return false;
+  if (
+    dec.activateOnlyEvery !== undefined &&
+    chatLength % dec.activateOnlyEvery !== 0
+  )
+    return false;
+  if (dec.isGreeting !== undefined && greetingIndex !== dec.isGreeting)
+    return false;
+  return true;
+}
+
+export type SelectOpts = {
+  chatLength?: number;
+  greetingIndex?: number;
+  vars?: Record<string, string>;
+  seed?: string;
+};
+
+export function selectLorebookEntries(
+  recentUserTexts: string[],
+  entries: LbEntry[],
+  books: Map<string, LbRow>,
+  opts: SelectOpts = {},
+): LbEntry[] {
+  if (entries.length === 0) return [];
+  const chatLength = opts.chatLength ?? recentUserTexts.length;
+  const greetingIndex = opts.greetingIndex ?? -1;
+  const vars = opts.vars;
+  const rollSeed = opts.seed ?? String(chatLength);
+
+  const globalBudget = Math.max(
+    ...[...books.values()].map((b) => b.tokenBudget ?? 1500),
+    1500,
+  );
+
+  const enabledEntries = entries.filter((e) => e.enabled !== false);
+  const prepared: Prepared[] = enabledEntries.map((e) => {
+    const book = books.get(e.lorebookId);
+    const dec = parseDecorators(e.content);
+    const scanDepth = dec.scanDepth ?? book?.scanDepth ?? 4;
+    const basePriority = dec.priority ?? e.priority ?? 0;
+    return {
+      entry: e,
+      dec,
+      scanText: recentUserTexts.slice(0, scanDepth).join("\n"),
+      effectivePriority: dec.ignoreOnMaxContext ? -1000 : basePriority,
+      // A @@probability decorator in the content wins over the stored column,
+      // since it is the per-entry authoring surface; the column is what an
+      // imported trigger carries. One roll either way, so an entry
+      // cannot be gated twice.
+      probPass: (() => {
+        const pct = dec.probability ?? e.chance ?? undefined;
+        if (pct === undefined) return true;
+        return seededRand(`${rollSeed}:${e.id}`) * 100 <= pct;
+      })(),
+    };
+  });
+
+  const globalRecursive = [...books.values()].some((b) => b.recursiveScanning);
+  const acceptedIds = new Set<string>();
+  const accepted: Prepared[] = [];
+  let recursiveText = "";
+
+  const kaKey = (id: string) => `__internal_ka_${id}`;
+  const daKey = (id: string) => `__internal_da_${id}`;
+
+  for (let pass = 0; pass < MAX_RECURSIVE_LOREBOOK_PASSES; pass++) {
+    let added = 0;
+    for (const p of prepared) {
+      if (acceptedIds.has(p.entry.id)) continue;
+      const id = p.entry.id;
+
+      if (vars?.[daKey(id)] === "true") continue;
+
+      if (!passesChatGates(p.dec, chatLength, greetingIndex)) continue;
+
+      let active: boolean;
+      if (p.dec.forceState === "deactivate") {
+        continue;
+      } else if (p.dec.forceState === "activate") {
+        active = true;
+      } else if (vars?.[kaKey(id)] === "true") {
+        active = true;
+      } else {
+        const text =
+          recursiveText && !p.dec.noRecursiveSearch
+            ? `${p.scanText}\n${recursiveText}`
+            : p.scanText;
+        active = entryMatches(p, text);
+      }
+      if (!active) continue;
+      if (!p.probPass) continue;
+
+      acceptedIds.add(id);
+      accepted.push(p);
+      added++;
+
+      if (vars && p.dec.keepActivateAfterMatch) vars[kaKey(id)] = "true";
+      if (vars && p.dec.dontActivateAfterMatch) vars[daKey(id)] = "true";
+    }
+    if (added === 0 || !globalRecursive) break;
+    recursiveText = accepted
+      .filter((p) => p.dec.recursive !== false)
+      .map((p) => p.dec.body)
+      .join("\n");
+  }
+
+  accepted.sort(
+    (a, b) =>
+      b.effectivePriority - a.effectivePriority ||
+      (a.entry.id < b.entry.id ? -1 : 1),
+  );
+  let used = 0;
+  const dropped: { id: string; cost: number; priority: number }[] = [];
+  const survived = accepted.filter((p) => {
+    const cost = countTokens(p.dec.body);
+    if (used + cost > globalBudget) {
+      dropped.push({
+        id: p.entry.id,
+        cost,
+        priority: p.effectivePriority,
+      });
+      return false;
+    }
+    used += cost;
+    return true;
+  });
+
+  logChatDebug("lorebook.select", {
+    entries: entries.length,
+    enabled: enabledEntries.length,
+    constant: prepared.filter((p) => p.entry.constant).length,
+    accepted: accepted.length,
+    survived: survived.length,
+    budget: globalBudget,
+    usedTokens: used,
+    droppedCount: dropped.length,
+    droppedTokens: dropped.reduce((n, d) => n + d.cost, 0),
+    dropped: dropped.slice(0, 20),
+  });
+
+  const injectors = survived.filter((p) => p.dec.inject);
+  const placed = survived.filter((p) => !p.dec.inject);
+  for (const inj of injectors) {
+    const target = placed.find((p) => p.entry.id === inj.dec.inject!.location);
+    if (!target) continue;
+    const op = inj.dec.inject!.operation;
+    if (op === "append") target.dec.body = `${target.dec.body} ${inj.dec.body}`;
+    else if (op === "prepend")
+      target.dec.body = `${inj.dec.body} ${target.dec.body}`;
+    else if (op === "replace")
+      target.dec.body = target.dec.body.replace(
+        inj.dec.inject!.location,
+        inj.dec.body,
+      );
+  }
+
+  const order = (p: Prepared) => p.dec.order ?? p.entry.orderIndex ?? 0;
+  placed.sort(
+    (a, b) =>
+      order(b) - order(a) ||
+      b.effectivePriority - a.effectivePriority ||
+      (a.entry.id < b.entry.id ? -1 : 1),
+  );
+  return placed.map((p) => ({
+    ...p.entry,
+    content: p.dec.body,
+    ...(p.dec.role ? { injectionRole: p.dec.role } : {}),
+  }));
+}

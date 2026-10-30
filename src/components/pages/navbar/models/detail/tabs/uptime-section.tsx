@@ -1,0 +1,89 @@
+"use client";
+
+import {
+  StatusBar,
+  StatusBarSkeleton,
+} from "@/components/ui/status/status-bar";
+import { StatusBlocksI18n } from "@/components/pages/navbar/status/status-blocks-i18n";
+import type { StatusBarData } from "@/components/ui/status/status.types";
+import { useModelStatusBucketsQuery } from "@/hooks/models/model-status-hook";
+import type { StatusBucket } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { StatCard } from "./stat-card";
+import { formatPct } from "@/lib/utils/format/number";
+import { successIntent } from "@/lib/utils/format/math";
+import { useTranslations } from "next-intl";
+import { StatusBox } from "../shared/status-box";
+
+type Props = {
+  model: string;
+  bucket?: StatusBucket;
+  hours?: number;
+  className?: string;
+};
+
+// A bucket dominated by "success" counts as up; "degraded" as half-up; "error"
+// as down. Empty buckets (no probe) are excluded from the denominator.
+function uptimeFromSeries(series: StatusBarData[]): number | null {
+  let up = 0;
+  let total = 0;
+  for (const point of series) {
+    const ok = point.bar.find((s) => s.status === "success")?.height ?? 0;
+    const deg = point.bar.find((s) => s.status === "degraded")?.height ?? 0;
+    const err = point.bar.find((s) => s.status === "error")?.height ?? 0;
+    const measured = ok + deg + err;
+    if (measured <= 0) continue;
+    total += measured;
+    up += ok + deg / 2;
+  }
+  return total > 0 ? (up * 100) / total : null;
+}
+
+export function UptimeSection(props: Props) {
+  const t = useTranslations();
+  const query = useModelStatusBucketsQuery(
+    props.model,
+    props.bucket ?? "15m",
+    props.hours ?? 24,
+  );
+
+  if (query.isLoading) {
+    return <StatusBarSkeleton />;
+  }
+
+  const series = query.data ?? [];
+  if (series.length === 0) {
+    return <StatusBox>{t("MODELS.DETAIL.UPTIME_EMPTY")}</StatusBox>;
+  }
+
+  const uptime = uptimeFromSeries(series);
+  const intent = uptime === null ? "default" : successIntent(uptime);
+
+  return (
+    <div className={cn("flex flex-col gap-4", props.className)}>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <StatCard
+          label={t("MODELS.DETAIL.STAT_UPTIME")}
+          value={uptime === null ? "-" : formatPct(uptime)}
+          hint={t("MODELS.DETAIL.STAT_UPTIME_HINT")}
+          intent={intent}
+        />
+        <StatCard
+          label={t("MODELS.DETAIL.STAT_WINDOW")}
+          value={
+            (props.hours ?? 24) >= 168
+              ? t("MODELS.DETAIL.WINDOW_7D")
+              : t("MODELS.DETAIL.WINDOW_24H")
+          }
+          hint={t("MODELS.DETAIL.STAT_WINDOW_HINT")}
+        />
+      </div>
+
+      <div className="border-border rounded-md border p-3">
+        <StatusBlocksI18n>
+          <StatusBar data={series} />
+        </StatusBlocksI18n>
+      </div>
+    </div>
+  );
+}

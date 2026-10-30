@@ -1,0 +1,477 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-header: var(--header);
+  --color-composer: var(--composer);
+  --color-bubble-user: var(--bubble-user);
+  --color-bubble-assistant: var(--bubble-assistant);
+  --color-footer: var(--footer);
+  --color-overlay: var(--overlay);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  /* Inline theme values are pasted into every utility, so a var() here is what
+     lets the user theme swap shadows at runtime. */
+  --shadow-xs: var(--theme-shadow-xs, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+  --shadow-sm: var(--theme-shadow-sm, 0 1px 3px 0 rgb(0 0 0 / 0.1));
+  --shadow-md: var(--theme-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+  --shadow-lg: var(--theme-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+}
+
+:root {
+  --expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius: 0;
+  /* Region surfaces default to the shadcn token they used to share. */
+  --header: var(--background);
+  --composer: var(--background);
+  --bubble-user: var(--muted);
+  --bubble-assistant: var(--muted);
+  --footer: color-mix(in srgb, var(--muted) 30%, transparent);
+  --overlay: color-mix(in srgb, var(--card) 95%, transparent);
+  --background: #ffffff;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --chart-1: oklch(0.55 0.2 250);
+  --chart-2: oklch(0.55 0.18 160);
+  --chart-3: oklch(0.52 0.18 300);
+  --chart-4: oklch(0.6 0.16 85);
+  --chart-5: oklch(0.55 0.15 30);
+  --sidebar: #fafafa;
+  --sidebar-foreground: #09090b;
+  --sidebar-primary: #18181b;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #a1a1aa;
+}
+
+.dark {
+  --background: #050505;
+  --foreground: #f8fafc;
+  --card: #0a0a0a;
+  --card-foreground: #f8fafc;
+  --popover: #0a0a0a;
+  --popover-foreground: #f8fafc;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: rgba(255, 255, 255, 0.05);
+  --secondary-foreground: #f8fafc;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #9ca3af;
+  --accent: rgba(255, 255, 255, 0.05);
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(255, 255, 255, 0.2);
+  --chart-1: oklch(0.75 0.15 250);
+  --chart-2: oklch(0.72 0.18 160);
+  --chart-3: oklch(0.7 0.15 300);
+  --chart-4: oklch(0.78 0.16 85);
+  --chart-5: oklch(0.68 0.14 30);
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgba(255, 255, 255, 0.05);
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: rgba(255, 255, 255, 0.2);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* User theme tokens land as variables; these rules are their only readers.
+     An unset var() on an inherited property resolves to inherit, which is the
+     fallback every one of them wants. */
+  html {
+    font-size: calc(100% * var(--font-scale, 1));
+    /* The root is what iOS rubber bands; the same rule on body alone does
+       nothing for it. */
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden font-sans;
+    font-weight: var(--font-weight, 400);
+    letter-spacing: var(--tracking, normal);
+    /* Kill double-tap-to-zoom (the per-message zoom drift Matic hit) without a
+       hard viewport zoom lock, so pinch-zoom accessibility still works. */
+    touch-action: manipulation;
+    /* No rubber-band on the document; inner containers own their scroll. */
+    overscroll-behavior: none;
+  }
+
+  /* Opt-in: the root overscroll rule above is also what turns off the
+     browser's own pull to refresh. */
+  html.pull-to-refresh,
+  html.pull-to-refresh body {
+    overscroll-behavior-y: auto;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  .aui-user-message-content,
+  .aui-md:not(.aui-user-message-content .aui-md) {
+    font-size: calc(1em * var(--prose-scale, 1));
+  }
+  .aui-md p,
+  .aui-md li {
+    color: var(--md-normal);
+  }
+  .aui-md em {
+    color: var(--md-italic);
+  }
+  .aui-md strong {
+    color: var(--md-bold);
+    /* Preflight's `bolder` jumps 600 straight to 900, a weight almost no
+       family ships. */
+    font-weight: calc(var(--font-weight, 400) + 200);
+  }
+  .aui-md strong em,
+  .aui-md em strong {
+    color: var(--md-italic-bold);
+  }
+  .aui-md [data-md-quote="sq"] {
+    color: var(--md-single-quote);
+  }
+  .aui-md [data-md-quote="dq"] {
+    color: var(--md-double-quote);
+  }
+}
+
+/* Unlayered on purpose: the img carries max-w-full, and a layered rule loses to
+   that utility, so the asset width slider would never reach the image. */
+.aui-md img[data-asset] {
+  max-width: min(100%, var(--asset-img-max-width, 20rem));
+}
+
+/* Inner scroll regions: contain the bounce so an over-scroll never leaks to a
+   parent layer (the "outer layer steals my scroll" mobile bug). */
+.aui-thread-viewport,
+.thin-scrollbar {
+  overscroll-behavior: contain;
+}
+
+/* Keyframe Animations */
+
+/* Hero brand chips: ambient drift. transform-only (composite step, no layout/
+   paint), small distance, long duration. NO will-change - promoting 27 chips to
+   their own GPU layers is what caused jank; the compositor batches them fine
+   without it. Per-chip --fx/--fy vary direction so they don't move in lockstep. */
+@keyframes float-chip {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--fx, 5px), var(--fy, -6px));
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility animations */
+@utility animate-marquee {
+  animation: marquee 50s linear infinite;
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Footer badge rows. Slower than the model ticker because these are logos the
+   eye has to resolve, not a glanceable stream. The track is duplicated in the
+   markup, so -50% lands exactly on the seam. */
+@utility animate-marquee-slow {
+  animation: marquee 80s linear infinite;
+}
+
+@utility animate-marquee-slow-reverse {
+  animation: marquee-reverse 80s linear infinite;
+}
+
+/* Pause on hover so a badge can actually be clicked. */
+.marquee-row:hover .animate-marquee-slow,
+.marquee-row:hover .animate-marquee-slow-reverse {
+  animation-play-state: paused;
+}
+
+/* Motion-sensitive users get the full static block instead of a moving one:
+   stop the animation AND let the track wrap, or half the badges sit off-screen
+   with no way to reach them. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-slow,
+  .animate-marquee-slow-reverse {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .marquee-row .marquee-dup {
+    display: none;
+  }
+}
+
+/* Hero brand chip drift. Duration/delay/--fx/--fy are overridden inline per
+   chip. Declared as a @utility so Tailwind v4 keeps the float-chip keyframe
+   (bare @keyframes get tree-shaken if nothing references them). */
+@utility animate-float-chip {
+  animation: float-chip 10s ease-in-out infinite;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* Shimmer animation for streaming indicators */
+@keyframes shimmer-sweep {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    currentColor 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-sweep 1.5s linear infinite;
+}
+
+/* Navbar scroll-driven background */
+@keyframes navbar-scroll-bg {
+  0% {
+    background-color: transparent;
+    border-color: transparent;
+    backdrop-filter: blur(0);
+  }
+  100% {
+    background-color: color-mix(in srgb, var(--header) 90%, transparent);
+    border-color: var(--border);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .navbar-scroll,
+  .scroll-surface {
+    animation: navbar-scroll-bg linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0px 11px;
+  }
+}
+
+/* Safari has no scroll-timeline, so the scroll-driven background never runs and
+   the fixed navbar stays transparent, letting scrolled content bleed through it.
+   Fall back to a permanently-solid navbar there.
+   .scroll-surface is the same effect for sticky bars inside the page. It cannot
+   use bg-background: the wallpaper theme zeroes a .bg-background nested in
+   another one, which left the models tab bar see-through. */
+@supports not (animation-timeline: scroll()) {
+  .navbar-scroll,
+  .scroll-surface {
+    background-color: color-mix(in srgb, var(--header) 90%, transparent);
+    border-color: var(--border);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Shiki dual-theme: show light tokens by default, dark tokens in .dark */
+html .shiki,
+html .shiki span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+html.dark .shiki,
+html.dark .shiki span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+/* Bump shiki comment contrast to meet WCAG AA.
+   vitesse-light uses #A0ADA0 (~3.3:1 on card bg) and vitesse-dark uses #758575
+   (~3.5:1) for comments. Override both so comments hit ~4.6:1. */
+html .shiki span[style*="#A0ADA0"] {
+  color: #6b7a6b;
+}
+html.dark .shiki span[style*="#758575"] {
+  color: #9aa89a;
+}
+
+/* Hide assistant-ui dot cursor when markdown is empty (our StreamingIndicator handles it) */
+.aui-md[data-status="running"]:empty::after {
+  display: none !important;
+}
+
+/* Thin overlay scrollbar that fades when idle. Native-thin (no fat webkit pill);
+   the permanent mobile bar is handled by the DOM ScrollIndicator overlay where
+   needed (iOS Safari ignores ::-webkit-scrollbar). */
+@utility thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  &:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  }
+}
+
+.dark .thin-scrollbar:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+mjx-container {
+  display: inline-block !important;
+  vertical-align: middle;
+}
+
+mjx-container[display="true"] {
+  display: block !important;
+  text-align: center;
+  margin: 0.75rem 0;
+}
+
+/* Chat shell placeholder: opaque SSR cover for the whole thread area. The
+   runtime assembles progressively underneath; dropping the cover only when
+   the real composer input exists makes the page change visually once. */
+.chat-shell:has(.aui-composer-input) .chat-welcome-placeholder,
+.chat-shell:has(.chat-shell-reveal) .chat-welcome-placeholder {
+  display: none;
+}
+
+/* iOS zooms the page into any field under 16px on focus and leaves it zoomed.
+   Unlayered on purpose, so it outranks a text-xs on the field itself. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
+  }
+}

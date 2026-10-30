@@ -1,0 +1,128 @@
+import { isRecord, rec, recArr } from "@/lib/utils/base";
+
+export type BodyMutations = {
+  injectCacheControl?: boolean;
+  deepSeekPrefix?: boolean;
+  deepSeekThinking?: { enabled: boolean; effort: string };
+  deepSeekReasoningContent?: string;
+  claudeAdaptive?: { effort: "high" | "xhigh" | "max" };
+  cacheBust?: boolean;
+};
+
+export function hasBodyMutation(opts?: BodyMutations): boolean {
+  return Boolean(
+    opts &&
+    (opts.injectCacheControl ||
+      opts.deepSeekPrefix ||
+      opts.deepSeekThinking ||
+      opts.deepSeekReasoningContent ||
+      opts.claudeAdaptive ||
+      opts.cacheBust),
+  );
+}
+
+function applyCacheControl(body: Record<string, unknown>) {
+  const messages = recArr(body.messages);
+  if (messages.length === 0) return;
+  const mark = (content: unknown): unknown => {
+    if (typeof content === "string") {
+      return [
+        { type: "text", text: content, cache_control: { type: "ephemeral" } },
+      ];
+    }
+    if (Array.isArray(content) && content.length > 0) {
+      const last: unknown = content[content.length - 1];
+      if (isRecord(last)) {
+        last.cache_control = { type: "ephemeral" };
+      }
+      return content;
+    }
+    return content;
+  };
+  const sys = messages.find((m) => m.role === "system");
+  if (sys) sys.content = mark(sys.content);
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      messages[i].content = mark(messages[i].content);
+      break;
+    }
+  }
+}
+
+// A provider prefix cache matches from the first token and none of them offers
+// an off switch, so the only lever that works across the catalog is a first
+// line that has never been sent before. Random rather than counted: a counter
+// restarts with each chat and repeats across users sharing one upstream key.
+function applyCacheBust(body: Record<string, unknown>) {
+  const first = recArr(body.messages)[0];
+  if (!first) return;
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  const id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const line = `[${id}]\nIgnore the line above, it is a request id.\n\n`;
+  if (typeof first.content === "string") {
+    first.content = line + first.content;
+    return;
+  }
+  if (!Array.isArray(first.content)) return;
+  const head: unknown = first.content[0];
+  if (isRecord(head) && head.type === "text" && typeof head.text === "string")
+    head.text = line + head.text;
+  else first.content.unshift({ type: "text", text: line });
+}
+
+// Firefox honors a user-agent set on fetch; the SDK's "ai-sdk/..." value then
+// replaces the browser's and trips the edge's browser-only rule on /api/ai/.
+function withoutUserAgent(
+  init: RequestInit | undefined,
+): RequestInit | undefined {
+  if (typeof window === "undefined" || !init?.headers) return init;
+  const headers = new Headers(init.headers);
+  headers.delete("user-agent");
+  return { ...init, headers };
+}
+
+export function makeUpstreamFetch(opts?: BodyMutations): typeof fetch {
+  return async (input, init) => {
+    init = withoutUserAgent(init);
+    if (!opts || !hasBodyMutation(opts)) return fetch(input, init);
+    try {
+      if (init?.body && typeof init.body === "string") {
+        const body = rec(JSON.parse(init.body));
+        if (!body) return fetch(input, init);
+        if (opts.injectCacheControl) applyCacheControl(body);
+        if (opts.cacheBust) applyCacheBust(body);
+        const msgs = recArr(body.messages);
+        const last = msgs[msgs.length - 1];
+        if (opts.deepSeekPrefix && last?.role === "assistant") {
+          last.prefix = true;
+        }
+        if (opts.deepSeekReasoningContent && last?.role === "assistant") {
+          last.reasoning_content = opts.deepSeekReasoningContent;
+        }
+        if (opts.deepSeekThinking) {
+          body.thinking = {
+            type: opts.deepSeekThinking.enabled ? "enabled" : "disabled",
+          };
+          // Top level: nested inside `thinking` the effort is dropped and the
+          // model answers with no reasoning at all.
+          if (opts.deepSeekThinking.enabled)
+            body.reasoning_effort = opts.deepSeekThinking.effort;
+          else delete body.reasoning_effort;
+          if (opts.deepSeekThinking.enabled) {
+            delete body.temperature;
+            delete body.top_p;
+            delete body.frequency_penalty;
+            delete body.presence_penalty;
+          }
+        }
+        if (opts.claudeAdaptive) {
+          body.thinking = { type: "adaptive", display: "summarized" };
+          body.output_config = { effort: opts.claudeAdaptive.effort };
+          delete body.reasoning_effort;
+        }
+        init = { ...init, body: JSON.stringify(body) };
+      }
+    } catch {}
+    return fetch(input, init);
+  };
+}

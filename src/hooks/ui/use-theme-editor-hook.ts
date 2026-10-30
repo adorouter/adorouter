@@ -1,0 +1,393 @@
+"use client";
+
+import {
+  countThemeHistory,
+  dropThemeEntry,
+  pushLocalTheme,
+  readPreviousTheme,
+} from "@/lib/db/client/data/theme";
+import { resolveVars } from "@/lib/theme/build-css";
+import { migrateTheme } from "@/lib/theme/migrate";
+import {
+  ACCENTS,
+  CUSTOM,
+  DEFAULT,
+  PALETTES,
+  RADIUS_CHOICES,
+  STYLES,
+} from "@/lib/theme/presets";
+import { FONT_OPTIONS } from "@/lib/theme/fonts";
+import {
+  themeBackgroundAtoms,
+  themeEditorAtom,
+  userThemeAtom,
+} from "@/lib/theme/theme-store";
+import {
+  INITIAL_USER_THEME,
+  modeValues,
+  presetsOf,
+  readToken,
+  writePresets,
+  writeToken,
+  type ModeValues,
+  type ThemeImages,
+  type ThemePresets,
+  type TokenValues,
+  type UserTheme,
+} from "@/lib/theme/theme-types";
+import {
+  ICON_LIBRARY_OPTIONS,
+  THEME_SCOPES,
+  type ThemeMode,
+  type ThemeScope,
+  type TokenDef,
+} from "@/lib/theme/tokens";
+import { pick } from "@/lib/utils/base";
+import { useAtom } from "jotai";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+export type ThemeBundle = {
+  name: string;
+  theme: UserTheme;
+  backgroundImages: ThemeImages;
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function imagesOf(v: unknown): ThemeImages {
+  const out: ThemeImages = {};
+  if (!isRecord(v)) return out;
+  for (const scope of THEME_SCOPES) {
+    const img = v[scope];
+    if (typeof img === "string" && img.startsWith("data:image/"))
+      out[scope] = img;
+  }
+  return out;
+}
+
+// Accepts the list format, a single v2 theme, and the v1 file shape whose
+// wallpaper rode along as `backgroundImage`.
+export function parseThemeFile(
+  text: string,
+  fallbackName: string,
+): ThemeBundle[] {
+  const parsed: unknown = JSON.parse(text);
+  if (!isRecord(parsed)) throw new Error("theme-file");
+  if (Array.isArray(parsed.themes)) {
+    return parsed.themes.filter(isRecord).map((entry, i) => ({
+      name:
+        typeof entry.name === "string" && entry.name
+          ? entry.name
+          : `${fallbackName} ${i + 1}`,
+      theme: migrateTheme(entry.theme),
+      backgroundImages: imagesOf(entry.backgroundImages),
+    }));
+  }
+  const { backgroundImage, backgroundImages, ...rest } = parsed;
+  const images = imagesOf(backgroundImages);
+  if (
+    typeof backgroundImage === "string" &&
+    backgroundImage.startsWith("data:image/")
+  ) {
+    images.app = backgroundImage;
+  }
+  return [
+    { name: fallbackName, theme: migrateTheme(rest), backgroundImages: images },
+  ];
+}
+
+const STYLE_IDS = ["user-theme", "user-theme-bg"];
+
+function subscribeThemeStyles(onChange: () => void): () => void {
+  const observer = new MutationObserver(onChange);
+  for (const id of STYLE_IDS) {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el, { childList: true, characterData: true });
+  }
+  // The wallpaper tag is created on first use, so watch for it arriving too.
+  observer.observe(document.head, { childList: true });
+  return () => observer.disconnect();
+}
+
+function themeStylesSnapshot(): string {
+  return STYLE_IDS.map(
+    (id) => document.getElementById(id)?.textContent ?? "",
+  ).join("\n");
+}
+
+// The page paints one mode, so the other mode's defaults come from the
+// stylesheet rules themselves (`:root` and `.dark`), later rules winning.
+function rootDeclarations(mode: ThemeMode): CSSStyleDeclaration[] {
+  const selector = mode === "dark" ? ".dark" : ":root";
+  const out: CSSStyleDeclaration[] = [];
+  const walk = (rules: CSSRuleList) => {
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule && rule.selectorText === selector) {
+        out.push(rule.style);
+      } else if (rule instanceof CSSGroupingRule) {
+        walk(rule.cssRules);
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) {
+    try {
+      walk(sheet.cssRules);
+    } catch {
+      // cross-origin sheet
+    }
+  }
+  return out;
+}
+
+function stylesheetVar(cssVar: string, mode: ThemeMode): string | undefined {
+  const decls = rootDeclarations(mode);
+  const lookup = (name: string): string => {
+    for (let i = decls.length - 1; i >= 0; i--) {
+      const v = decls[i]?.getPropertyValue(name).trim();
+      if (v) return v;
+    }
+    return "";
+  };
+  let value = lookup(cssVar);
+  for (let hops = 0; hops < 4; hops++) {
+    const ref = /^var\((--[\w-]+)\)$/.exec(value);
+    if (!ref?.[1]) break;
+    value = lookup(ref[1]);
+  }
+  return value || undefined;
+}
+
+export function useThemeEditor() {
+  const [theme, setThemeRaw] = useAtom(userThemeAtom);
+  const [editor, setEditor] = useAtom(themeEditorAtom);
+  const [appImage, setAppImage] = useAtom(themeBackgroundAtoms.app);
+  const [chatImage, setChatImage] = useAtom(themeBackgroundAtoms.chat);
+  const [imageImage, setImageImage] = useAtom(themeBackgroundAtoms.image);
+  const images: ThemeImages = {
+    app: appImage ?? undefined,
+    chat: chatImage ?? undefined,
+    image: imageImage ?? undefined,
+  };
+  // `inherited` reads computed vars off the page, which the provider only
+  // rewrites after this render; re-render once the style tags really changed.
+  useSyncExternalStore(subscribeThemeStyles, themeStylesSnapshot, () => "");
+  const imageSetters = {
+    app: setAppImage,
+    chat: setChatImage,
+    image: setImageImage,
+  };
+
+  const [canUndo, setCanUndo] = useState(false);
+  // Redo is per session: undo drops its DB row on use, so the stepped-over
+  // theme only exists here until a new edit makes it unreachable.
+  const redoStack = useRef<UserTheme[]>([]);
+  const [canRedo, setCanRedo] = useState(false);
+
+  useEffect(() => {
+    void countThemeHistory()
+      .then((n) => setCanUndo(n > 1))
+      .catch(() => {});
+  }, []);
+
+  // A slider drag fires per pixel; the history row lands once the hand
+  // rests, or a long drag writes hundreds of rows and stalls the page.
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setTheme = (next: UserTheme) => {
+    redoStack.current = [];
+    setCanRedo(false);
+    setThemeRaw(next);
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      pushTimer.current = null;
+      void pushLocalTheme(next)
+        .then(() => setCanUndo(true))
+        .catch(() => {});
+    }, 400);
+  };
+
+  // Applies WITHOUT pushing history: an undo that recorded itself would bury
+  // the entry it just restored and the next press would step nowhere.
+  const undo = async (): Promise<boolean> => {
+    const previous = await readPreviousTheme().catch(() => null);
+    if (!previous) {
+      setCanUndo(false);
+      return false;
+    }
+    redoStack.current.push(theme);
+    setCanRedo(true);
+    setThemeRaw(previous.theme);
+    await dropThemeEntry(previous.dropId).catch(() => {});
+    const remaining = await countThemeHistory().catch(() => 0);
+    setCanUndo(remaining > 1);
+    return true;
+  };
+
+  const redo = (): boolean => {
+    const next = redoStack.current.pop();
+    setCanRedo(redoStack.current.length > 0);
+    if (!next) return false;
+    setThemeRaw(next);
+    void pushLocalTheme(next)
+      .then(() => setCanUndo(true))
+      .catch(() => {});
+    return true;
+  };
+
+  const scope = editor.scope;
+  const mode = editor.mode;
+  // What the app layer renders for this mode, so a scope tab can show what it
+  // inherits and a preset-driven colour reads as a real value.
+  const effective: TokenValues = resolveVars(theme, "app", mode);
+
+  const read = (def: TokenDef) => readToken(theme, scope, mode, def);
+  const write = (def: TokenDef, value: string | number | undefined) =>
+    setTheme(writeToken(theme, scope, mode, def, value));
+  // What is in force when the token is unset: the app layer of the theme,
+  // else whatever globals.css and the wallpaper rules currently paint, read
+  // off the live page. The page only shows one mode, so the DOM answer is
+  // used when the editor's mode tab matches it.
+  const inherited = (def: TokenDef): string | number | undefined => {
+    if (scope !== "app") {
+      const own = readToken(theme, "app", mode, def);
+      if (own !== undefined) return own;
+    }
+    const derived = def.cssVar ? effective[def.cssVar.slice(2)] : undefined;
+    if (derived !== undefined || typeof document === "undefined")
+      return derived;
+    const pageMode: ThemeMode = document.documentElement.classList.contains(
+      "dark",
+    )
+      ? "dark"
+      : "light";
+    if (def.perMode && pageMode !== mode) {
+      return def.cssVar ? stylesheetVar(def.cssVar, mode) : undefined;
+    }
+    const root =
+      (scope !== "app" &&
+        document.querySelector(`[data-theme-scope="${scope}"]`)) ||
+      document.documentElement;
+    if (def.probe) {
+      const el = document.querySelector(def.probe);
+      const blur = el
+        ? /blur\((\d+(?:\.\d+)?)px\)/.exec(getComputedStyle(el).backdropFilter)
+        : null;
+      return blur ? Number(blur[1]) : undefined;
+    }
+    if (!def.cssVar) return undefined;
+    const raw = getComputedStyle(root).getPropertyValue(def.cssVar).trim();
+    if (!raw) return undefined;
+    if (def.kind === "number") {
+      const n = parseFloat(raw);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return raw;
+  };
+
+  // Every per-mode value of the current scope, copied over the other mode.
+  const copyModeToOther = () => {
+    const values = modeValues(theme, scope);
+    const other: ThemeMode = mode === "light" ? "dark" : "light";
+    const next: ModeValues = {
+      ...values,
+      [other]: { ...(values[mode] ?? {}) },
+    };
+    if (scope === "app") setTheme({ ...theme, global: next });
+    else setTheme({ ...theme, scopes: { ...theme.scopes, [scope]: next } });
+  };
+
+  const presets = presetsOf(theme, scope);
+  const setPreset = (key: keyof ThemePresets, id: string) =>
+    setTheme(writePresets(theme, scope, { ...presets, [key]: id }));
+
+  const setImage = (target: ThemeScope, dataUrl: string | null) =>
+    imageSetters[target](dataUrl);
+
+  const applyBundle = (bundle: ThemeBundle) => {
+    setTheme(bundle.theme);
+    for (const s of THEME_SCOPES)
+      imageSetters[s](bundle.backgroundImages[s] ?? null);
+  };
+
+  // App resets its presets and tokens; Chat and Image drop their overrides.
+  const resetScope = () => {
+    if (scope === "app") {
+      setTheme({ ...theme, presets: INITIAL_USER_THEME.presets, global: {} });
+    } else {
+      const scopes = { ...theme.scopes };
+      delete scopes[scope];
+      setTheme({ ...theme, scopes });
+    }
+    imageSetters[scope](null);
+  };
+  const scopeIsDefault =
+    scope === "app"
+      ? JSON.stringify(theme.presets) ===
+          JSON.stringify(INITIAL_USER_THEME.presets) &&
+        Object.keys(theme.global).length === 0 &&
+        !images.app
+      : !theme.scopes[scope] && !images[scope];
+
+  // Presets for the current tab, fonts and radius alongside; a scope's
+  // picks go through the same generator and leave the app theme alone.
+  const shuffle = () => {
+    const sans = pick(FONT_OPTIONS.filter((f) => f.kinds.includes("sans")));
+    const display = pick(
+      FONT_OPTIONS.filter((f) => f.kinds.includes("display")),
+    );
+    const values = modeValues(theme, scope);
+    const all: TokenValues = {
+      ...(values.all ?? {}),
+      radius: pick(RADIUS_CHOICES),
+      "font-sans": sans.id,
+    };
+    if (Math.random() < 0.5) all["font-display"] = display.id;
+    else delete all["font-display"];
+    if (scope === "app") all["icon-library"] = pick(ICON_LIBRARY_OPTIONS).value;
+    const picked: ThemePresets = {
+      style: pick(STYLES).id,
+      palette: pick([DEFAULT, ...PALETTES.map((p) => p.id)]),
+      accent: pick([DEFAULT, ...ACCENTS.map((a) => a.id)]),
+      chart: pick([DEFAULT, ...ACCENTS.map((a) => a.id)]),
+    };
+    const next = writePresets(theme, scope, picked);
+    if (scope === "app") setTheme({ ...next, global: { ...next.global, all } });
+    else
+      setTheme({
+        ...next,
+        scopes: { ...next.scopes, [scope]: { ...next.scopes[scope], all } },
+      });
+  };
+
+  const isCustom = (key: keyof ThemePresets) => presets[key] === CUSTOM;
+
+  return {
+    theme,
+    setTheme,
+    editor,
+    setEditor,
+    scope,
+    mode,
+    images,
+    setImage,
+    effective,
+    read,
+    write,
+    inherited,
+    presets,
+    setPreset,
+    isCustom,
+    copyModeToOther,
+    applyBundle,
+    resetScope,
+    scopeIsDefault,
+    shuffle,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  };
+}
+
+export type ThemeEditor = ReturnType<typeof useThemeEditor>;

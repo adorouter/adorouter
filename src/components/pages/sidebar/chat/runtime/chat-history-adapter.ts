@@ -1,0 +1,893 @@
+import type { ApiMessage, MessagePart } from "@/lib/ai/chat/messages";
+import { isCustomModelId } from "@/lib/ai/chat/custom-provider-id";
+import {
+  itemsToParts,
+  partsToItems,
+  walkActiveBranch,
+} from "@/lib/ai/chat/messages";
+import { upsertLocalMedia } from "@/lib/db/client/data/media/media";
+import { invalidateInlay } from "@/lib/db/client/data/media/inlay-render";
+import {
+  readConvRegexScripts,
+  readConvTriggers,
+  readLocalConversation,
+  readLocalConversationSettings,
+  readLocalMessages,
+  upsertLocalConversation,
+  upsertLocalConversationSettings,
+  upsertLocalMessage,
+  upsertLocalMessageItem,
+  readJoinedMessages,
+  replaceLocalMessageItems,
+} from "@/lib/db/client/data/chat/chat";
+import { runRegexScripts } from "@/lib/ai/chat/regex-scripts";
+import type { IllustratorConvSettings } from "./illustrator-run";
+import { makeTriggerContext, runTriggers } from "@/lib/ai/chat/triggers/vm";
+import type { TriggerScript } from "@/lib/ai/chat/triggers/types";
+import { makeClientTriggerOps } from "./trigger-ops-client";
+import { insertLocalRequestLog } from "@/lib/db/client/data/chat/request-log";
+import {
+  drainSoon,
+  enqueueLogEnrich,
+} from "@/lib/db/client/outbox/pending/queue";
+import type { RequestLogRow } from "@/lib/db/schema/rows";
+import { queryKeys } from "@/lib/react-query/keys";
+import type { ChatMessageMetadata } from "@/lib/types";
+import { parseStringMap, uid } from "@/lib/utils/base";
+import { dayjs } from "@/lib/utils/format/date";
+import {
+  chatModelAtom,
+  chatStore,
+  convIdAtom,
+  getThreadRuntime,
+  globalVarsAtom,
+  historyLoadedAtom,
+  lastStreamErrorAtom,
+  speakingCharacterIdAtom,
+} from "@/store/chat-store";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import {
+  getExternalStoreMessages,
+  type MessageFormatAdapter,
+  type MessageFormatItem,
+  type MessageFormatRepository,
+  type ThreadHistoryAdapter,
+  type ThreadMessage,
+} from "@assistant-ui/core";
+import type { QueryClient } from "@tanstack/react-query";
+
+type EncodedContent = {
+  role: "system" | "user" | "assistant" | "tool";
+  parts: MessagePart[];
+};
+
+type MessageItem = ReturnType<typeof partsToItems>[number];
+
+type IllustratorJob = {
+  taskId: string;
+  settings: IllustratorConvSettings;
+  utilityModel: string;
+};
+
+async function repairBrokenChain(
+  convId: string,
+  msgs: ApiMessage[],
+): Promise<ApiMessage[]> {
+  if (msgs.length < 2) return msgs;
+  const ids = new Set(msgs.map((m) => m.id));
+  const ts = (m: ApiMessage) => dayjs(m.createdAt ?? 0).valueOf();
+  const sorted = [...msgs].sort((a, b) => ts(a) - ts(b));
+  const firstUser = sorted.find((m) => m.role === "user");
+  const repaired: ApiMessage[] = [];
+  const out = msgs.map((m) => {
+    const dangling = m.parentId != null && !ids.has(m.parentId);
+    const isGreeting =
+      m.parentId == null &&
+      m.role === "assistant" &&
+      (firstUser == null || ts(m) <= ts(firstUser));
+    const firstRoot = sorted[0]?.id === m.id;
+    const midConversation = sorted.some(
+      (p) => p.role === "assistant" && ts(p) < ts(m),
+    );
+    const phantomRoot =
+      m.parentId == null && !isGreeting && !firstRoot && midConversation;
+    if (!dangling && !phantomRoot) return m;
+    const prev = [...sorted]
+      .reverse()
+      .find((p) => p.id !== m.id && ts(p) < ts(m));
+    if (!prev) return m;
+    const fixed = { ...m, parentId: prev.id };
+    repaired.push(fixed);
+    return fixed;
+  });
+  if (repaired.length > 0) {
+    logChatDebug("history.chain_repair", {
+      convId,
+      repaired: repaired.map((m) => m.id),
+    });
+    // Opportunistic: the repaired chain is already in `out`, so a write that
+    // cannot land must not take the history render down with it.
+    try {
+      for (const m of repaired) {
+        const { items: _items, ...row } = m;
+        await upsertLocalMessage({ ...row, convId });
+      }
+    } catch {}
+  }
+  return out;
+}
+
+function withLiveTurn<TMessage>(
+  convId: string,
+  stored: ApiMessage[],
+  threadMessages: readonly ThreadMessage[],
+  encode: (message: TMessage) => EncodedContent,
+): ApiMessage[] {
+  const known = new Set(stored.map((m) => m.id));
+  const out = [...stored];
+  let parentId =
+    [...stored].reverse().find((m) => m.isActiveBranch !== false)?.id ?? null;
+  const now = dayjs().toDate();
+  for (const tm of threadMessages) {
+    // The streaming reply stays out: the sdk re-pushes it on the next chunk,
+    // and a copy here would mark it persisted before it ever settles.
+    const settled =
+      tm.status === undefined ||
+      tm.status.type === "complete" ||
+      tm.status.type === "incomplete";
+    if (!settled) continue;
+    for (const inner of getExternalStoreMessages<TMessage>(tm)) {
+      const content = encode(inner);
+      const id = formatIdOf(inner);
+      if (!id) continue;
+      if (!known.has(id)) {
+        out.push({
+          id,
+          convId,
+          parentId,
+          role: content.role,
+          isActiveBranch: true,
+          createdAt: now,
+          items: partsToItems(content.parts).map((it, seq) => ({
+            id: it.id ?? uid(),
+            sequenceIndex: seq,
+            outputIndex: it.output_index ?? null,
+            type: it.type,
+            data: it.data,
+          })),
+        });
+        known.add(id);
+      }
+      parentId = id;
+    }
+  }
+  return out;
+}
+
+function formatIdOf(message: unknown): string | null {
+  return typeof message === "object" &&
+    message !== null &&
+    "id" in message &&
+    typeof message.id === "string"
+    ? message.id
+    : null;
+}
+
+function buildRepository<TMessage>(
+  raw: ApiMessage[],
+  formatAdapter: MessageFormatAdapter<TMessage, Record<string, unknown>>,
+): MessageFormatRepository<TMessage> {
+  const messages = raw.map<MessageFormatItem<TMessage>>((m) => {
+    const parts = itemsToParts(m.items ?? []);
+    const decoded = formatAdapter.decode({
+      id: m.id,
+      parent_id: m.parentId ?? null,
+      format: formatAdapter.format,
+      content: { role: m.role, parts },
+    });
+    return decoded;
+  });
+
+  const activeTip = [...raw].reverse().find((m) => m.isActiveBranch !== false);
+  const headId =
+    activeTip?.id ?? (raw.length > 0 ? raw[raw.length - 1].id : null);
+  return { headId, messages };
+}
+
+function assistantTextOf(content: EncodedContent): string {
+  if (content.role !== "assistant") return "";
+  return content.parts
+    .filter(
+      (p): p is MessagePart & { text: string } =>
+        p.type === "text" && typeof p.text === "string",
+    )
+    .map((p) => p.text)
+    .join("\n");
+}
+
+async function applyAssistantOutputTransforms(
+  convId: string,
+  parts: MessagePart[],
+): Promise<MessagePart[]> {
+  let out = parts;
+  const scripts = await readConvRegexScripts(convId);
+  if (scripts.length > 0) {
+    out = out.map((p) =>
+      p.type === "text" && typeof p.text === "string"
+        ? { ...p, text: runRegexScripts(p.text, scripts, "editoutput") }
+        : p,
+    );
+  }
+  const triggers = await readConvTriggers(convId);
+  if (triggers.length > 0) {
+    const { extractLuaCodes, runLuaEditTrigger } =
+      await import("@/lib/ai/chat/triggers/lua/engine");
+    const luaCodes = extractLuaCodes(triggers);
+    if (luaCodes.length > 0) {
+      const editCtx = makeTriggerContext({
+        mode: "output",
+        vars: {},
+        globalVars: {},
+        chat: [],
+      });
+      out = await Promise.all(
+        out.map(async (p) =>
+          p.type === "text" && typeof p.text === "string"
+            ? {
+                ...p,
+                text: await runLuaEditTrigger(
+                  luaCodes,
+                  "editoutput",
+                  editCtx,
+                  p.text,
+                ),
+              }
+            : p,
+        ),
+      );
+    }
+    await runOutputTriggers(convId, triggers, out);
+  }
+  const { hasJsHandlers, runJsEditTrigger } =
+    await import("@/lib/ai/chat/plugins/engine");
+  if (hasJsHandlers("output")) {
+    const editCtx = makeTriggerContext({
+      mode: "output",
+      vars: {},
+      globalVars: {},
+      chat: [],
+    });
+    out = await Promise.all(
+      out.map(async (p) =>
+        p.type === "text" && typeof p.text === "string"
+          ? { ...p, text: await runJsEditTrigger("output", editCtx, p.text) }
+          : p,
+      ),
+    );
+  }
+  return out;
+}
+
+function appendStreamErrorItem(
+  items: MessageItem[],
+  resolvedModel: string | null,
+): void {
+  const streamError = chatStore.get(lastStreamErrorAtom);
+  if (!streamError || Date.now() - streamError.at >= 30_000) return;
+  chatStore.set(lastStreamErrorAtom, null);
+  if (items.some((it) => it.type === "error")) return;
+  items.push({
+    type: "error",
+    data: {
+      message: streamError.message,
+      ...(resolvedModel && { model: resolvedModel }),
+      ...(streamError.code && { code: streamError.code }),
+      ...(streamError.status && { status: streamError.status }),
+      ...(streamError.requestId && { requestId: streamError.requestId }),
+    },
+  });
+}
+
+async function prepareIllustratorJob(
+  convId: string,
+  items: MessageItem[],
+  resolvedModel: string | null,
+): Promise<IllustratorJob | null> {
+  const { resolveIllustratorSettings } = await import("./illustrator-run");
+  const illu = await resolveIllustratorSettings(convId);
+  const hasError = items.some((it) => it.type === "error");
+  if (!illu?.imageEnabled || hasError) return null;
+  const taskId = uid();
+  const job: IllustratorJob = {
+    taskId,
+    settings: illu,
+    utilityModel: illu.utilityModel || resolvedModel || illu.defaultModel || "",
+  };
+  items.push({
+    type: "task",
+    data: {
+      task_id: taskId,
+      kind: "image",
+      model: job.utilityModel,
+      status: "generating",
+    },
+  });
+  return job;
+}
+
+async function persistInlayMedia(
+  convId: string,
+  metadata: ChatMessageMetadata | null,
+): Promise<void> {
+  if (!metadata?.inlayMedia) return;
+  for (const m of metadata.inlayMedia) {
+    await upsertLocalMedia({
+      id: m.id,
+      convId,
+      mimeType: m.mimeType,
+      sizeBytes: m.sizeBytes,
+      dataBase64: m.dataBase64,
+      r2Key: null,
+      r2Url: null,
+      width: m.width,
+      height: m.height,
+    });
+    // The token resolver cached a resolved-empty marker while streaming; without
+    // dropping it the image stays blank until reload.
+    invalidateInlay(m.id);
+  }
+}
+
+type BranchPlacement = {
+  parentId: string | null;
+  parentBranchVars: string | null;
+  nextBranchIndex: number;
+};
+
+// Existing siblings MUST be deactivated and the new one take the next
+// branchIndex, else walkActiveBranch picks the wrong tip and a branch switch
+// renders an empty thread.
+// A message is only ever added to the branch on screen, so its ancestors ARE
+// the active branch. A swipe whose switch never reached the database left an
+// older reply inactive under a live continuation, and the next reload from the
+// database jumped back to the stale swipe.
+async function activateAncestors(
+  convId: string,
+  parentId: string | null,
+  now: Date,
+): Promise<void> {
+  const rows = (await readLocalMessages(convId)) ?? [];
+  const byId = new Map(rows.map((m) => [m.id, m]));
+  const fixed: string[] = [];
+  const seen = new Set<string>();
+  for (
+    let cur = parentId ? byId.get(parentId) : undefined;
+    cur && !seen.has(cur.id);
+    cur = cur.parentId ? byId.get(cur.parentId) : undefined
+  ) {
+    seen.add(cur.id);
+    if (cur.isActiveBranch !== false) continue;
+    fixed.push(cur.id);
+    const parent = cur.parentId ?? null;
+    for (const sib of rows) {
+      if ((sib.parentId ?? null) !== parent) continue;
+      const active = sib.id === cur.id;
+      if ((sib.isActiveBranch !== false) === active) continue;
+      await upsertLocalMessage({
+        ...sib,
+        isActiveBranch: active,
+        updatedAt: now,
+      });
+    }
+  }
+  if (fixed.length > 0)
+    logChatDebug("branch.reactivated", { convId, messages: fixed });
+}
+
+async function placeOnBranch(
+  convId: string,
+  messageId: string,
+  requestedParentId: string | null,
+  now: Date,
+  role: string,
+): Promise<BranchPlacement> {
+  let parentId = requestedParentId;
+  let parentBranchVars: string | null = null;
+  let siblings: NonNullable<Awaited<ReturnType<typeof readLocalMessages>>> = [];
+  const existing = (await readLocalMessages(convId)) ?? [];
+  if (existing.length > 0) {
+    const tipRow = walkActiveBranch(existing).path.at(-1);
+    if (parentId === null && tipRow) parentId = tipRow.id;
+    // A requested parent that isn't persisted would FK-fail the insert.
+    if (parentId && !existing.some((m) => m.id === parentId)) {
+      parentId = tipRow?.id ?? null;
+    }
+    // A history load during a new chat's first send can drop the user's
+    // message from the runtime, which then parents the reply on the greeting
+    // and hides the message on a dead branch. The fresh childless user turn
+    // under that same parent is the one this reply answers.
+    if (role === "assistant" && parentId) {
+      const newest = existing.reduce<(typeof existing)[number] | undefined>(
+        (a, m) =>
+          !a || dayjs(m.createdAt).valueOf() > dayjs(a.createdAt).valueOf()
+            ? m
+            : a,
+        undefined,
+      );
+      if (
+        newest &&
+        newest.role === "user" &&
+        newest.parentId === parentId &&
+        now.getTime() - dayjs(newest.createdAt).valueOf() < 120_000 &&
+        !existing.some((m) => m.parentId === newest.id)
+      ) {
+        logChatDebug("history.reparent", {
+          convId,
+          messageId,
+          from: parentId,
+          to: newest.id,
+        });
+        parentId = newest.id;
+      }
+    }
+    const parentRow = parentId
+      ? existing.find((m) => m.id === parentId)
+      : tipRow;
+    parentBranchVars = parentRow?.branchVars ?? null;
+    siblings = existing.filter(
+      (m) => (m.parentId ?? null) === parentId && m.id !== messageId,
+    );
+  }
+  const nextBranchIndex =
+    siblings.length === 0
+      ? 0
+      : Math.max(
+          ...siblings.map((s) => s.branchIndex ?? 0),
+          siblings.length - 1,
+        ) + 1;
+  for (const sib of siblings) {
+    await upsertLocalMessage({
+      ...sib,
+      isActiveBranch: false,
+      updatedAt: now,
+    });
+  }
+  await activateAncestors(convId, parentId, now);
+  return { parentId, parentBranchVars, nextBranchIndex };
+}
+
+async function persistRequestLog(
+  queryClient: QueryClient,
+  convId: string,
+  messageId: string,
+  metadata: ChatMessageMetadata | null,
+  resolvedModel: string | null,
+  now: Date,
+): Promise<void> {
+  const usage = metadata?.usage ?? null;
+  const debug = metadata?.debug ?? null;
+  if (!debug) return;
+  const logRow: RequestLogRow = {
+    ...debug,
+    msgId: messageId,
+    convId,
+    inputTokens: usage?.inputTokens ?? null,
+    outputTokens: usage?.outputTokens ?? null,
+    cachedInputTokens: usage?.cachedInputTokens ?? null,
+    cost: usage?.cost ?? null,
+    durationMs: usage?.durationMs ?? null,
+    tokensPerSecond: usage?.tokensPerSecond ?? null,
+    createdAt: now,
+  };
+  await insertLocalRequestLog(logRow);
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.requestLog(messageId),
+  });
+  const reqId = logRow.requestId;
+  if (reqId && !isCustomModelId(resolvedModel)) {
+    await enqueueLogEnrich(messageId, reqId);
+    drainSoon();
+  }
+}
+
+async function bumpConversationTotals(
+  convId: string,
+  existingConv: Awaited<ReturnType<typeof readLocalConversation>>,
+  metadata: ChatMessageMetadata | null,
+  now: Date,
+): Promise<void> {
+  const usage = metadata?.usage ?? null;
+  const varsWriteback = metadata?.vars ?? null;
+  const convForTotals = existingConv ?? (await readLocalConversation(convId));
+  await upsertLocalConversation({
+    ...(convForTotals ?? {}),
+    id: convId,
+    totalInputTokens:
+      (convForTotals?.totalInputTokens ?? 0) + (usage?.inputTokens ?? 0),
+    totalOutputTokens:
+      (convForTotals?.totalOutputTokens ?? 0) + (usage?.outputTokens ?? 0),
+    totalCost: (convForTotals?.totalCost ?? 0) + (usage?.cost ?? 0),
+    ...(varsWriteback != null ? { vars: varsWriteback } : {}),
+    ...(metadata?.summary
+      ? {
+          summaryMemory: metadata.summary.summary,
+          summaryAnchor: metadata.summary.anchor,
+        }
+      : {}),
+    updatedAt: now,
+  });
+}
+
+function fireIllustrator(
+  queryClient: QueryClient,
+  job: IllustratorJob,
+  args: {
+    convId: string;
+    messageId: string;
+    responseText: string;
+  },
+): void {
+  void (async () => {
+    try {
+      const { runIllustrator } = await import("./illustrator-run");
+      const reviewPrompt = job.settings.imagePreview
+        ? (
+            await import("@/components/pages/sidebar/chat/image-prompt-dialog-store")
+          ).requestImagePromptReview
+        : undefined;
+      await runIllustrator({
+        convId: args.convId,
+        messageId: args.messageId,
+        taskId: job.taskId,
+        responseText: args.responseText,
+        utilityModel: job.utilityModel,
+        promptInstruction: job.settings.promptInstruction,
+        imageModel: job.settings.imageModel,
+        refMediaIds: job.settings.refMediaIds,
+        reviewPrompt,
+      });
+    } catch {
+    } finally {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.chatMessages(args.convId),
+      });
+    }
+  })();
+}
+
+// assistant-ui appends a turn only once it completes, so a stream that never
+// terminates persists NEITHER side. append() dedups on message id.
+export type PersistTurn = (
+  message: object,
+  parentId: string | null,
+) => Promise<void>;
+
+const pendingAppends = new Map<string, Promise<void>>();
+
+export function createChatHistoryAdapter(
+  queryClient: QueryClient,
+  getConvId: () => string | null,
+  onFormatReady?: (persist: PersistTurn) => void,
+): ThreadHistoryAdapter {
+  return {
+    async load() {
+      throw new Error(
+        "chat-history-adapter: outer load() should not be called; use withFormat()",
+      );
+    },
+
+    async append() {
+      throw new Error(
+        "chat-history-adapter: outer append() should not be called; use withFormat()",
+      );
+    },
+
+    withFormat<TMessage, TStorageFormat extends Record<string, unknown>>(
+      formatAdapter: MessageFormatAdapter<TMessage, TStorageFormat>,
+    ) {
+      const format = {
+        async load(): Promise<MessageFormatRepository<TMessage>> {
+          try {
+            const id = getConvId();
+            if (!id) return { messages: [] };
+
+            type MsgPage = { messages: ApiMessage[]; total: number };
+            type Cached = { pages: MsgPage[]; pageParams: number[] };
+
+            // useMessageMeta mounts the infinite query on the SAME key while
+            // the thread renders, so the cache is usually warm here. Repair
+            // either way: it is idempotent and returns its input untouched
+            // when the chain is whole.
+            const cached = queryClient.getQueryData<Cached>([
+              ...queryKeys.chatMessages(id),
+            ]);
+            const stored = await repairBrokenChain(
+              id,
+              cached
+                ? cached.pages.flatMap((p) => p.messages)
+                : await readJoinedMessages(id),
+            );
+
+            // assistant-ui replaces the live list with whatever load() returns,
+            // and on a new chat it loads while the first turn is streaming, so
+            // the turn's own messages must ride along or the user's message
+            // vanishes and the reply lands as a sibling of its stored row.
+            const thread = getThreadRuntime()?.getState();
+            const allMessages = thread?.isRunning
+              ? withLiveTurn<TMessage>(
+                  id,
+                  stored,
+                  thread.messages,
+                  (m) =>
+                    formatAdapter.encode({
+                      message: m,
+                      parentId: null,
+                    }) as unknown as EncodedContent,
+                )
+              : stored;
+            logChatDebug("history.load", {
+              convId: id,
+              convIdAtom: chatStore.get(convIdAtom),
+              count: stored.length,
+              source: cached ? "cache" : "db",
+              live: thread?.messages.length ?? null,
+              running: thread?.isRunning ?? null,
+              merged: allMessages.length - stored.length,
+            });
+            return buildRepository(allMessages, formatAdapter);
+          } finally {
+            chatStore.set(historyLoadedAtom, true);
+          }
+        },
+
+        // The user turn is persisted as the request leaves and again by the
+        // runtime; run concurrently, both miss the row and store its parts twice.
+        append(item: MessageFormatItem<TMessage>) {
+          const messageId = formatAdapter.getId(item.message);
+          const run = (pendingAppends.get(messageId) ?? Promise.resolve()).then(
+            () => appendNow(item),
+          );
+          const settled = run.catch(() => {});
+          pendingAppends.set(messageId, settled);
+          void settled.then(() => {
+            if (pendingAppends.get(messageId) === settled)
+              pendingAppends.delete(messageId);
+          });
+          return run;
+        },
+      };
+
+      const appendNow = async (item: MessageFormatItem<TMessage>) => {
+        const id = getConvId();
+        if (!id) return;
+
+        const messageId = formatAdapter.getId(item.message);
+        // A group turn and auto-continue stream into the SAME message, so the
+        // row exists and now holds the next speaker's parts too.
+        const existingRow = ((await readLocalMessages(id)) ?? []).find(
+          (m) => m.id === messageId,
+        );
+        logChatDebug("history.append", {
+          convId: id,
+          convIdAtom: chatStore.get(convIdAtom),
+          messageId,
+          role: (item.message as { role?: string }).role,
+          parentId: item.parentId ?? null,
+          existing: !!existingRow,
+        });
+        const content = formatAdapter.encode(item) as unknown as EncodedContent;
+        if (existingRow && content.role !== "assistant") return;
+        const isAssistant = content.role === "assistant";
+        const originalAssistantText = assistantTextOf(content);
+
+        const parts = isAssistant
+          ? await applyAssistantOutputTransforms(id, content.parts)
+          : content.parts;
+        const items = partsToItems(parts);
+        const resolvedModel = isAssistant ? chatStore.get(chatModelAtom) : null;
+
+        if (isAssistant) {
+          appendStreamErrorItem(items, resolvedModel);
+          if (items.length === 0) return;
+        }
+
+        const illustratorJob =
+          isAssistant && !existingRow && originalAssistantText.trim()
+            ? await prepareIllustratorJob(id, items, resolvedModel)
+            : null;
+
+        const now = dayjs().toDate();
+        const metadata =
+          (item.message as { metadata?: ChatMessageMetadata }).metadata ?? null;
+        const usage = metadata?.usage ?? null;
+        const varsWriteback = metadata?.vars ?? null;
+        await persistInlayMedia(id, metadata);
+        if (metadata?.globalVars != null) {
+          chatStore.set(globalVarsAtom, metadata.globalVars);
+        }
+
+        const speakingCharId = isAssistant
+          ? (metadata?.speakingCharacterId ??
+            chatStore.get(speakingCharacterIdAtom))
+          : null;
+
+        const placement = existingRow
+          ? {
+              parentId: existingRow.parentId ?? null,
+              parentBranchVars: existingRow.branchVars ?? null,
+              nextBranchIndex: existingRow.branchIndex ?? 0,
+            }
+          : await placeOnBranch(
+              id,
+              messageId,
+              item.parentId ?? null,
+              now,
+              content.role,
+            );
+        const branchVars = isAssistant
+          ? (varsWriteback ?? placement.parentBranchVars)
+          : placement.parentBranchVars;
+        const newMessage = {
+          ...(existingRow ?? {}),
+          id: messageId,
+          convId: id,
+          parentId: placement.parentId,
+          role: content.role,
+          model: resolvedModel,
+          characterId: existingRow?.characterId ?? speakingCharId,
+          inputTokens:
+            (existingRow?.inputTokens ?? 0) + (usage?.inputTokens ?? 0) || null,
+          outputTokens:
+            (existingRow?.outputTokens ?? 0) + (usage?.outputTokens ?? 0) ||
+            null,
+          cost: (existingRow?.cost ?? 0) + (usage?.cost ?? 0) || null,
+          isActiveBranch: true,
+          isEdited: false,
+          branchIndex: placement.nextBranchIndex,
+          branchVars,
+          createdAt: existingRow?.createdAt ?? now,
+          updatedAt: now,
+        };
+        const existingConv = await readLocalConversation(id);
+        if (!existingConv) {
+          await upsertLocalConversation({
+            id,
+            title: null,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
+            totalCost: 0,
+            createdAt: now,
+            defaultModel: resolvedModel ?? chatStore.get(chatModelAtom) ?? "",
+            updatedAt: now,
+          });
+        }
+        try {
+          await upsertLocalMessage(newMessage);
+          logChatDebug("history.persisted", {
+            convId: id,
+            messageId,
+            role: content.role,
+          });
+        } catch (e) {
+          logChatDebug("history.persist_error", {
+            convId: id,
+            messageId,
+            error: String(e).slice(0, 200),
+          });
+          throw e;
+        }
+
+        const itemRows = items.map((it, seq) => ({
+          id: it.id ?? uid(),
+          messageId,
+          sequenceIndex: seq,
+          outputIndex: it.output_index ?? null,
+          type: it.type,
+          data: it.data,
+          createdAt: now,
+        }));
+        if (existingRow) {
+          await replaceLocalMessageItems(messageId, itemRows);
+        } else {
+          for (const row of itemRows) {
+            await upsertLocalMessageItem(row);
+          }
+        }
+
+        await persistRequestLog(
+          queryClient,
+          id,
+          messageId,
+          metadata,
+          resolvedModel,
+          now,
+        );
+        await bumpConversationTotals(id, existingConv, metadata, now);
+        for (const queryKey of [
+          queryKeys.chatMeta(id),
+          queryKeys.chatMessages(id),
+          queryKeys.conversations(),
+        ]) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+
+        if (illustratorJob) {
+          fireIllustrator(queryClient, illustratorJob, {
+            convId: id,
+            messageId,
+            responseText: originalAssistantText,
+          });
+        }
+      };
+
+      onFormatReady?.(async (message, parentId) => {
+        let messageId: string | undefined;
+        try {
+          messageId = formatAdapter.getId(message as TMessage);
+        } catch {
+          return;
+        }
+        if (!messageId) return;
+        await format.append({ message: message as TMessage, parentId });
+      });
+      return format;
+    },
+  };
+}
+
+async function runOutputTriggers(
+  convId: string,
+  triggers: TriggerScript[],
+  parts: MessagePart[],
+): Promise<void> {
+  const settings = await readLocalConversationSettings(convId);
+  if (!settings) return;
+  const vars = parseStringMap(settings.vars ?? null);
+  const before = JSON.stringify(vars);
+  const globalVars = parseStringMap(chatStore.get(globalVarsAtom));
+  const globalsBefore = JSON.stringify(globalVars);
+  const replyText = parts
+    .filter(
+      (p): p is MessagePart & { text: string } =>
+        p.type === "text" && typeof p.text === "string",
+    )
+    .map((p) => p.text)
+    .join("\n");
+
+  const ctx = makeTriggerContext({
+    mode: "output",
+    vars,
+    globalVars,
+    chat: [{ role: "assistant", data: replyText }],
+    ops: makeClientTriggerOps(),
+  });
+  ctx.ops = {
+    ...ctx.ops,
+    runLua: async (code) => {
+      const { runScripted } = await import("@/lib/ai/chat/triggers/lua/engine");
+      await runScripted({
+        code,
+        mode: "output",
+        ctx,
+        lowLevelAccess: !!ctx.lowLevelAccess,
+      });
+    },
+  };
+  await runTriggers(triggers, "output", ctx);
+  if (ctx.sendAIprompt) {
+    const thread = getThreadRuntime();
+    const tip = thread?.getState().messages.at(-1);
+    if (thread && tip) thread.startRun({ parentId: tip.id });
+  }
+
+  if (JSON.stringify(vars) !== before) {
+    await upsertLocalConversationSettings({
+      convId,
+      vars: JSON.stringify(vars),
+    });
+  }
+  const globalsAfter = JSON.stringify(globalVars);
+  if (globalsAfter !== globalsBefore) {
+    chatStore.set(globalVarsAtom, globalsAfter);
+  }
+}

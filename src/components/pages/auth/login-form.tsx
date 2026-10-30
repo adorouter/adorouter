@@ -1,0 +1,288 @@
+"use client";
+
+import { MyFormInput } from "@/components/elements/form/my-form-input";
+import { OAuthButtons } from "@/components/pages/auth/oauth-buttons";
+import { TermsNotice } from "@/components/pages/auth/terms-notice";
+import { TwoFAForm } from "@/components/pages/auth/twofa-form";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { GlassAuthCard } from "@/components/ui/glass-auth-card";
+import { useLoginMutation } from "@/hooks/auth/auth-hook";
+import { useStatusQuery } from "@/hooks/ops/status-hook";
+import { Link, useRouter } from "@/i18n/navigation";
+import { RouterPush } from "@/i18n/routing";
+import {
+  APP_VALUES,
+  AUTH_REDIRECT_COOKIE,
+  LOGIN_CHALLENGE_COOKIE,
+  OAUTH_ERROR_QUERY,
+} from "@/lib/config/constants";
+import {
+  loginChallengeChecker,
+  loginChecker,
+  loginSchema,
+  type LoginSchema,
+  type VerificationMethod,
+} from "@/lib/validation/auth";
+import { formDefaults, safeParse } from "@/lib/validation/helpers";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import { extractErrorDetail, sameOriginPath } from "@/lib/utils/client";
+import { typeboxResolver } from "@hookform/resolvers/typebox";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { deleteCookie, getCookie } from "cookies-next/client";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+
+export function LoginForm() {
+  const t = useTranslations();
+  const router = useRouter();
+  const loginMutation = useLoginMutation();
+  const statusQuery = useStatusQuery();
+
+  const form = useForm({
+    resolver: typeboxResolver(loginSchema),
+    defaultValues: formDefaults(loginSchema),
+  });
+
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFAFlowToken, setTwoFAFlowToken] = useState<string | undefined>();
+  const [challengeMethods, setChallengeMethods] = useState<
+    VerificationMethod[] | undefined
+  >();
+  const searchParams = useSearchParams();
+  const [formError, setFormError] = useState<string | undefined>(
+    () => searchParams.get(OAUTH_ERROR_QUERY) ?? undefined,
+  );
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>();
+  const turnstileRef = useRef<TurnstileInstance>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(OAUTH_ERROR_QUERY)) return;
+    url.searchParams.delete(OAUTH_ERROR_QUERY);
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  // An OAuth login whose account has 2FA lands here with the challenge it still owes.
+  useEffect(() => {
+    const raw = getCookie(LOGIN_CHALLENGE_COOKIE);
+    if (typeof raw !== "string") return;
+    deleteCookie(LOGIN_CHALLENGE_COOKIE, { path: "/" });
+    let challenge: unknown;
+    try {
+      challenge = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (!loginChallengeChecker.Check(challenge)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the cookie is only readable after hydration
+    setTwoFAFlowToken(challenge.flow_token);
+    setChallengeMethods(challenge.methods);
+    setShow2FA(true);
+  }, []);
+
+  const username = useWatch({ control: form.control, name: "username" });
+  const password = useWatch({ control: form.control, name: "password" });
+  const isValid = safeParse(loginChecker, { username, password }).success;
+
+  function getRedirectPath() {
+    const redirect = sameOriginPath(getCookie(AUTH_REDIRECT_COOKIE));
+    deleteCookie(AUTH_REDIRECT_COOKIE);
+    return (redirect as RouterPush) || "/dashboard";
+  }
+
+  async function onSubmit(data: LoginSchema) {
+    setFormError(undefined);
+    try {
+      const result = await loginMutation.mutateAsync({
+        body: {
+          username: data.username.trim(),
+          password: data.password,
+          turnstile: turnstileToken,
+        },
+      });
+      if (
+        result &&
+        "require_verification" in result &&
+        result.require_verification
+      ) {
+        logChatDebug("auth.verification_required", {
+          hasFlowToken:
+            "flow_token" in result && typeof result.flow_token === "string",
+        });
+        if ("flow_token" in result && typeof result.flow_token === "string") {
+          setTwoFAFlowToken(result.flow_token);
+        }
+        if ("methods" in result && Array.isArray(result.methods)) {
+          setChallengeMethods(result.methods);
+        }
+        setShow2FA(true);
+        return;
+      }
+
+      // No session and no challenge means the response contract moved under us.
+      // Navigating here is what turned the require_2fa rename into a silent
+      // bounce: the redirect cookie gets eaten and the auth gate sends the user
+      // straight back with nothing on screen.
+      if (!result || !("access_token" in result) || !result.access_token) {
+        logChatDebug("auth.login_no_session", {});
+        setFormError(t("ERRORS.UNEXPECTED_ERROR"));
+        return;
+      }
+
+      const to = getRedirectPath();
+      logChatDebug("auth.login_done", { via: "password", to: String(to) });
+      router.push(to);
+      router.refresh();
+    } catch (e) {
+      logChatDebug("auth.login_error", { error: extractErrorDetail(e) });
+      turnstileRef.current?.reset();
+      setTurnstileToken(undefined);
+    }
+  }
+
+  if (show2FA) {
+    return (
+      <TwoFAForm
+        flowToken={twoFAFlowToken}
+        methods={challengeMethods}
+        onSuccess={() => {
+          const to = getRedirectPath();
+          logChatDebug("auth.login_done", { via: "2fa", to: String(to) });
+          router.push(to);
+          router.refresh();
+        }}
+      />
+    );
+  }
+
+  const showPasswordForm = statusQuery.data?.password_login_enabled !== false;
+  const emailAsUsername = statusQuery.data?.email_verification === true;
+
+  return (
+    <GlassAuthCard
+      title={t("AUTH.LOGIN.TITLE")}
+      description={t("AUTH.LOGIN.DESCRIPTION", APP_VALUES)}
+    >
+      <div className="space-y-6">
+        {showPasswordForm && (
+          <Form {...form}>
+            <form
+              onSubmit={(e) => {
+                form.handleSubmit(onSubmit)(e);
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-3">
+                <MyFormInput
+                  control={form.control}
+                  name="username"
+                  schema={loginSchema}
+                  label={
+                    emailAsUsername
+                      ? t("AUTH.FORM.USERNAME_OR_EMAIL")
+                      : t("AUTH.FORM.USERNAME")
+                  }
+                  type="text"
+                  autoComplete="username"
+                  placeholder={
+                    emailAsUsername
+                      ? t("AUTH.FORM.USERNAME_OR_EMAIL_PLACEHOLDER")
+                      : t("AUTH.FORM.USERNAME_PLACEHOLDER")
+                  }
+                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                />
+                <MyFormInput
+                  control={form.control}
+                  name="password"
+                  schema={loginSchema}
+                  label={t("AUTH.FORM.PASSWORD")}
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder={t("AUTH.FORM.PASSWORD_PLACEHOLDER")}
+                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                />
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-muted-foreground hover:text-foreground text-xs hover:underline"
+                  >
+                    {t("AUTH.FORGOT_PASSWORD.LINK")}
+                  </Link>
+                </div>
+              </div>
+
+              {statusQuery.data?.turnstile_check &&
+                statusQuery.data.turnstile_site_key && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={statusQuery.data.turnstile_site_key}
+                      onSuccess={setTurnstileToken}
+                    />
+                  </div>
+                )}
+
+              {(formError || loginMutation.error) && (
+                <p className="text-destructive text-center text-xs font-medium">
+                  {formError ?? loginMutation.error?.message}
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                disabled={
+                  !isValid ||
+                  loginMutation.isPending ||
+                  (statusQuery.data?.turnstile_check && !turnstileToken)
+                }
+                className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+              >
+                {loginMutation.isPending
+                  ? t("AUTH.LOGGING_IN")
+                  : t("AUTH.LOGIN.BUTTON")}
+              </Button>
+            </form>
+          </Form>
+        )}
+
+        {!showPasswordForm &&
+          statusQuery.data?.turnstile_check &&
+          statusQuery.data.turnstile_site_key && (
+            <div className="flex justify-center">
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={statusQuery.data.turnstile_site_key}
+                onSuccess={setTurnstileToken}
+              />
+            </div>
+          )}
+
+        {statusQuery.data && (
+          <OAuthButtons
+            status={statusQuery.data}
+            notice={<TermsNotice variant="oauth" />}
+            termsVariant="oauth"
+            turnstileToken={turnstileToken}
+            onTurnstileSpent={() => {
+              turnstileRef.current?.reset();
+              setTurnstileToken(undefined);
+            }}
+          />
+        )}
+
+        <p className="text-muted-foreground text-center text-sm">
+          {t("AUTH.DONT_HAVE_ACCOUNT")}{" "}
+          <Link
+            href="/register"
+            className="text-foreground font-medium hover:underline"
+          >
+            {t("AUTH.REGISTER.BUTTON")}
+          </Link>
+        </p>
+      </div>
+    </GlassAuthCard>
+  );
+}

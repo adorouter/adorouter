@@ -1,0 +1,139 @@
+"use client";
+
+import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
+import {
+  useDeletePresetMutation,
+  useDuplicatePresetMutation,
+  useImportPresetMutation,
+  usePresetsQuery,
+} from "@/hooks/ai/rp/presets";
+import type { EntityEditId } from "@/lib/types";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { PresetForm } from "./form";
+import { useRpExportMutation } from "@/hooks/ai/rp/use-export-mutation";
+import { RpEntityPage } from "../shared/rp-entity-page";
+import {
+  confirmRpDelete,
+  RpEmptyCard,
+  RpEntityRow,
+  rpFilter,
+  RpImportControl,
+} from "../shared/rp-list-parts";
+import { useToggleFavoriteMutation } from "@/hooks/ai/rp/favorites";
+
+export function PresetsPage() {
+  const t = useTranslations();
+  const presetsQuery = usePresetsQuery();
+  const [rpQuery, setRpQuery] = useState("");
+  const deleteMut = useDeletePresetMutation();
+  const duplicateMut = useDuplicatePresetMutation();
+  const exportMut = useRpExportMutation();
+  const favoriteMut = useToggleFavoriteMutation("preset");
+  const importMut = useImportPresetMutation();
+  const [editingId, setEditingId] = useState<EntityEditId>(null);
+
+  const handleExport = (id: string) =>
+    exportMut.mutate({ kind: "presets", id });
+
+  const handleDelete = async (id: string) => {
+    const ok = await confirmRpDelete(
+      t,
+      "COMMON.CONFIRM.DELETE_PRESET_TITLE",
+      "COMMON.CONFIRM.DELETE_PRESET_DESC",
+    );
+    if (!ok) return;
+    await deleteMut.mutateAsync(id);
+    if (editingId === id) setEditingId(null);
+  };
+
+  return (
+    <RpEntityPage
+      search={rpQuery}
+      onSearchChange={setRpQuery}
+      titleKey="RP.PRESETS_TITLE"
+      subtitleKey="RP.PRESETS_PAGE_SUBTITLE"
+      newLabelKey="RP.PRESETS_NEW"
+      backLabelKey="RP.PRESETS_BACK"
+      isEditing={editingId !== null}
+      onNew={() => {
+        setEditingId("new");
+      }}
+      onBack={() => setEditingId(null)}
+      headerActions={
+        <RpImportControl
+          accept=".json,application/json"
+          labelKey="RP.PRESETS_IMPORT"
+          isPending={importMut.isPending}
+          onFile={(file) => importMut.mutateAsync(file).then(() => {})}
+        />
+      }
+      editor={
+        editingId && (
+          <PresetForm
+            key={editingId}
+            editingId={editingId}
+            onDone={() => setEditingId(null)}
+          />
+        )
+      }
+      list={
+        // The ROWS scroll, not the page: an import can bring many items at once,
+        // and scrolling everything pushes the search and import controls away.
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          {presetsQuery.data?.length === 0 && (
+            <RpEmptyCard labelKey="RP.PRESETS_EMPTY" />
+          )}
+          {rpFilter(presetsQuery.data, rpQuery, (p) => [p.name]).map((p) => (
+            <RpEntityRow
+              key={p.id}
+              createdAt={p.createdAt}
+              updatedAt={p.updatedAt}
+              favorite={{
+                on: p.isFavorite,
+                onToggle: () =>
+                  favoriteMut.mutate({ id: p.id, isFavorite: !p.isFavorite }),
+              }}
+              onOpen={() => {
+                setEditingId(p.id);
+              }}
+              name={
+                <>
+                  {p.name}
+                  {p.isDefault && (
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      ({t("RP.PRESET_DEFAULT").toLowerCase()})
+                    </span>
+                  )}
+                </>
+              }
+              description={
+                <>
+                  T={p.temperature ?? t("RP.PRESET_SAMPLING_OFF")} | TopP=
+                  {p.topP ?? t("RP.PRESET_SAMPLING_OFF")} | TopK=
+                  {p.topK ?? t("RP.PRESET_SAMPLING_OFF")}
+                </>
+              }
+              actions={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleExport(p.id);
+                  }}
+                  aria-label={t("RP.PRESETS_EXPORT")}
+                >
+                  <Icon name="download" className="size-4" />
+                </Button>
+              }
+              onDuplicate={() => duplicateMut.mutate(p.id)}
+              onDelete={() => handleDelete(p.id)}
+            />
+          ))}
+        </div>
+      }
+    />
+  );
+}

@@ -1,0 +1,133 @@
+import { AffiliateCapture } from "@/components/pages/auth/affiliate-capture";
+import { AuthRedirectCapture } from "@/components/pages/auth/auth-redirect-capture";
+import { ClientRuntimeGuards } from "@/components/provider/app/client-runtime-guards";
+import { InteractiveWidgetMeta } from "@/components/provider/app/interactive-widget-meta";
+import { SwRegister } from "@/components/provider/app/sw-register";
+import { Providers } from "@/components/provider/providers";
+import { buildThemeCss, googleFontHref } from "@/lib/theme/build-css";
+import { allFontVariablesClass } from "@/lib/theme/fonts";
+import { migrateTheme } from "@/lib/theme/migrate";
+import { INITIAL_USER_THEME, USER_THEME_KEY } from "@/lib/theme/theme-types";
+import { APP_VALUES } from "@/lib/config/constants";
+import { JsonLd } from "@/lib/seo/json-ld";
+import { getPageMetadata, ogBadge } from "@/lib/seo/metadata";
+import {
+  buildOrganizationSchema,
+  buildWebSiteSchema,
+} from "@/lib/seo/structured-data";
+import { getCookieValue, serverLocale } from "@/lib/utils/server";
+import { Viewport } from "next";
+import { getTranslations } from "next-intl/server";
+import dynamic from "next/dynamic";
+import {
+  JetBrains_Mono,
+  Plus_Jakarta_Sans,
+  Space_Grotesk,
+} from "next/font/google";
+import "../globals.css";
+
+// interactive-widget is absent on purpose: see InteractiveWidgetMeta.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "optional",
+  preload: false,
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "optional",
+  preload: false,
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "optional",
+  preload: false,
+});
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string }>;
+}) {
+  const locale = await serverLocale(props);
+  const t = await getTranslations({ locale });
+
+  return getPageMetadata({
+    locale,
+    href: "/",
+    title: t("METADATA.TITLE", APP_VALUES),
+    description: t("METADATA.DESCRIPTION"),
+    keywords: t("METADATA.KEYWORDS"),
+    ogImage: ogBadge("hero", locale),
+  });
+}
+
+type Props = {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+};
+
+const Toaster = dynamic(() =>
+  import("@/components/ui/sonner").then((m) => ({ default: m.Toaster })),
+);
+
+const NotifyProvider = dynamic(() =>
+  import("@/components/provider/app/notify-provider").then((m) => ({
+    default: m.NotifyProvider,
+  })),
+);
+
+const DEFAULT_THEME_CSS = buildThemeCss(INITIAL_USER_THEME);
+
+export default async function LocaleLayout(props: Props) {
+  const params = await props.params;
+  const rawTheme = await getCookieValue<unknown>(USER_THEME_KEY);
+  const userTheme = rawTheme === undefined ? undefined : migrateTheme(rawTheme);
+  const themeCss = userTheme ? buildThemeCss(userTheme) : DEFAULT_THEME_CSS;
+  const fontHref = userTheme ? googleFontHref(userTheme) : null;
+
+  return (
+    <html lang={params.locale} suppressHydrationWarning>
+      <head>
+        {/* A second head-level next-themes provider emits this script twice:
+            next-themes does not dedupe across React trees. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var c=document.documentElement.classList;c.toggle("dark",d);c.toggle("light",!d)}catch(e){}`,
+          }}
+        />
+        {/* Plain style, no href/precedence: React's float cache discards the
+            textContent UserThemeProvider mutates for live edits. */}
+        <style id="user-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />
+        {fontHref && (
+          <link id="user-theme-font" rel="stylesheet" href={fontHref} />
+        )}
+      </head>
+      <body
+        className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${allFontVariablesClass} flex min-h-dvh flex-col font-sans antialiased`}
+      >
+        <JsonLd id="organization-jsonld" data={buildOrganizationSchema()} />
+        <JsonLd id="website-jsonld" data={buildWebSiteSchema(params.locale)} />
+        <Providers userTheme={userTheme}>
+          <Toaster richColors />
+          <InteractiveWidgetMeta />
+          <SwRegister />
+          <NotifyProvider />
+          <ClientRuntimeGuards />
+          <AffiliateCapture />
+          <AuthRedirectCapture />
+          {props.children}
+        </Providers>
+      </body>
+    </html>
+  );
+}

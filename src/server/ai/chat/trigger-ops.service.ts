@@ -1,0 +1,96 @@
+import { parseChatML } from "@/lib/ai/chat/chatml";
+import { generateEmbedding } from "./media/media-stream";
+import { cosineSimilarity, errMessage } from "@/lib/utils/base";
+import { logger } from "@/lib/utils/logger";
+import { getProvider } from "@/server/constants";
+import { generateText } from "ai";
+
+// Must THROW, never return the error as text: the illustrator treats whatever
+// comes back as the image prompt and would generate from the rejection message.
+export async function runTriggerLLM(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  group?: string | null,
+): Promise<string> {
+  const parsed = parseChatML(prompt);
+  const messages = parsed ?? [{ role: "user" as const, content: prompt }];
+  const provider = getProvider(apiKey, undefined, group);
+  // No cap, as in the chat: the gateway applies the model's own. A reasoning
+  // model thinks before it writes and glm-5.3 spends ~5k tokens on an RP reply,
+  // so a fixed 4096 came back empty; a higher literal 400s on strict providers.
+  const result = await generateText({
+    model: provider.chatModel(model),
+    messages,
+    // ChatML from the client carries its system turn inline, which the SDK
+    // rejects by default.
+    allowSystemInMessages: true,
+    maxRetries: 1,
+  });
+  if (!result.text) throw new Error("empty response");
+  return result.text;
+}
+
+export async function runTriggerSimilarity(
+  apiKey: string,
+  source: string,
+  values: string[],
+): Promise<string[]> {
+  const candidates = values
+    .filter((v) => v.length > 0)
+    .map((text, i) => ({ id: String(i), text }));
+  if (candidates.length === 0) return [];
+  const hits = await retrieveSemantic(apiKey, source, candidates, {
+    topK: candidates.length,
+    minScore: -1,
+  });
+  return hits.map((h) => h.text);
+}
+
+const DEFAULT_EMBED_MODEL = "text-embedding-3-small";
+
+type RetrievalCandidate = { id: string; text: string };
+
+async function retrieveSemantic(
+  apiKey: string,
+  queryText: string,
+  candidates: RetrievalCandidate[],
+  opts: { topK?: number; model?: string; minScore?: number } = {},
+): Promise<RetrievalCandidate[]> {
+  const topK = opts.topK ?? 3;
+  const model = opts.model ?? DEFAULT_EMBED_MODEL;
+  const minScore = opts.minScore ?? 0.2;
+  if (!queryText.trim() || candidates.length === 0) return [];
+
+  try {
+    const [queryEmb, candEmbs] = await Promise.all([
+      generateEmbedding(apiKey, model, queryText),
+      Promise.all(
+        candidates.map((c) => generateEmbedding(apiKey, model, c.text)),
+      ),
+    ]);
+    if (queryEmb.vector.length === 0) return [];
+
+    const scored = candidates
+      .map((c, i) => ({
+        c,
+        score: cosineSimilarity(queryEmb.vector, candEmbs[i].vector),
+      }))
+      .filter((x) => x.score >= minScore)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
+
+    logger.debug("Semantic retrieval", {
+      context: "stream.retrieval",
+      candidates: candidates.length,
+      returned: scored.length,
+    });
+    return scored.map((x) => x.c);
+  } catch (e) {
+    logger.warn("Semantic retrieval failed; skipping", {
+      context: "stream.retrieval",
+      error: errMessage(e),
+    });
+    return [];
+  }
+}

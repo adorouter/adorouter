@@ -1,0 +1,179 @@
+import type { BadgeSize } from "@/lib/validation/badge";
+import { makeCipher, pulseDot } from "../elements/cipher";
+import { BrandName, Card, Logo } from "../elements/primitives";
+import { Label, MonoValue } from "../elements/typography";
+import { t } from "../lib/assets";
+import { THEME_COLORS } from "../lib/theme";
+import type { BadgeCtx, BadgeDimsBase } from "../lib/types";
+import { formatCompact, renderBadgeTemplate } from "../lib/utils";
+
+interface Dims extends BadgeDimsBase {
+  logo: number;
+  brandFont: number;
+  valueSize: number;
+  labelSize: number;
+  gap: number;
+  radius: number;
+  dotR: number;
+  dotY: number;
+}
+
+const DIMS: Partial<Record<BadgeSize, Dims>> = {
+  xs: {
+    W: 110,
+    H: 110,
+    pad: 10,
+    logo: 28,
+    brandFont: 8,
+    valueSize: 12,
+    labelSize: 7,
+    gap: 4,
+    radius: 10,
+    dotR: 1.5,
+    dotY: 96,
+  },
+  sm: {
+    W: 140,
+    H: 140,
+    pad: 14,
+    logo: 36,
+    brandFont: 10,
+    valueSize: 16,
+    labelSize: 8,
+    gap: 5,
+    radius: 12,
+    dotR: 2,
+    dotY: 124,
+  },
+  md: {
+    W: 176,
+    H: 176,
+    pad: 20,
+    logo: 48,
+    brandFont: 12,
+    valueSize: 20,
+    labelSize: 9,
+    gap: 7,
+    radius: 14,
+    dotR: 2.5,
+    dotY: 156,
+  },
+  lg: {
+    W: 220,
+    H: 220,
+    pad: 26,
+    logo: 60,
+    brandFont: 15,
+    valueSize: 26,
+    labelSize: 11,
+    gap: 9,
+    radius: 16,
+    dotR: 3,
+    dotY: 196,
+  },
+  xl: {
+    W: 280,
+    H: 280,
+    pad: 34,
+    logo: 76,
+    brandFont: 19,
+    valueSize: 34,
+    labelSize: 14,
+    gap: 12,
+    radius: 18,
+    dotR: 4,
+    dotY: 250,
+  },
+  og: {
+    W: 1200,
+    H: 630,
+    pad: 80,
+    logo: 320,
+    brandFont: 56,
+    valueSize: 140,
+    labelSize: 40,
+    gap: 24,
+    radius: 40,
+    dotR: 8,
+    dotY: 590,
+  },
+};
+
+export async function generateTokensSquare(ctx: BadgeCtx): Promise<string> {
+  const c = THEME_COLORS[ctx.theme];
+  const d = DIMS[ctx.size]!;
+  const value = formatCompact(ctx.stats.token_used);
+  const cip = makeCipher();
+  const m1 = cip.mark(value, d.valueSize, c.text);
+  const isOg = ctx.size === "og";
+
+  const node = isOg ? (
+    <Card
+      c={c}
+      radius={d.radius}
+      style={{
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 120,
+        padding: `0 ${d.pad}px`,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: d.gap,
+        }}
+      >
+        <Logo size={d.logo} />
+        <BrandName c={c} size={d.brandFont} />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: d.gap / 2,
+        }}
+      >
+        <MonoValue value={value} c={c} size={d.valueSize} cipherMarker={m1} />
+        <Label
+          text={t(ctx.locale, "BADGE.TOKENS_SERVED")}
+          c={c}
+          size={d.labelSize}
+        />
+      </div>
+    </Card>
+  ) : (
+    <Card
+      c={c}
+      radius={d.radius}
+      style={{
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: d.gap,
+        padding: `${d.pad}px 0`,
+      }}
+    >
+      <Logo size={d.logo} />
+      <BrandName c={c} size={d.brandFont} />
+      <MonoValue value={value} c={c} size={d.valueSize} cipherMarker={m1} />
+      <Label
+        text={t(ctx.locale, "BADGE.TOKENS_SERVED")}
+        c={c}
+        size={d.labelSize}
+      />
+    </Card>
+  );
+
+  return renderBadgeTemplate({
+    node,
+    width: d.W,
+    height: d.H,
+    smil: pulseDot(d.W / 2, d.dotY, d.dotR, c.accent, ctx.staticMode),
+    cipherTargets: cip.targets,
+    staticMode: ctx.staticMode,
+  });
+}

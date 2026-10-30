@@ -1,0 +1,323 @@
+"use client";
+
+import { MyFormInput } from "@/components/elements/form/my-form-input";
+import { OAuthButtons } from "@/components/pages/auth/oauth-buttons";
+import {
+  TermsNotice,
+  useTermsShown,
+} from "@/components/pages/auth/terms-notice";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { GlassAuthCard } from "@/components/ui/glass-auth-card";
+import {
+  useRegisterMutation,
+  useSendVerificationMutation,
+} from "@/hooks/auth/auth-hook";
+import { useStatusQuery } from "@/hooks/ops/status-hook";
+import { Link, useRouter } from "@/i18n/navigation";
+import { extractErrorDetail } from "@/lib/utils/client";
+import {
+  AFF_CODE_KEY,
+  APP_VALUES,
+  RESEND_COOLDOWN_SECONDS,
+} from "@/lib/config/constants";
+import {
+  registerChecker,
+  registerSchema,
+  type RegisterSchema,
+} from "@/lib/validation/auth";
+import { formDefaults, safeParse } from "@/lib/validation/helpers";
+import { typeboxResolver } from "@hookform/resolvers/typebox";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { deleteCookie, getCookie } from "cookies-next/client";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+
+export function RegisterForm() {
+  const t = useTranslations();
+  const router = useRouter();
+  const registerMutation = useRegisterMutation();
+  const verificationMutation = useSendVerificationMutation();
+  const statusQuery = useStatusQuery();
+  const status = statusQuery.data;
+  const termsShown = useTermsShown("register");
+
+  const form = useForm({
+    resolver: typeboxResolver(registerSchema),
+    defaultValues: formDefaults(registerSchema),
+  });
+
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>();
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const id = setTimeout(() => setResendSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendSeconds]);
+
+  useEffect(() => {
+    const stored = getCookie(AFF_CODE_KEY);
+    if (typeof stored === "string" && stored && !form.getValues("aff_code")) {
+      form.setValue("aff_code", stored);
+    }
+  }, [form]);
+
+  async function handleSendCode() {
+    const email = form.getValues("email");
+    if (!email?.trim()) return;
+    await verificationMutation.mutateAsync({
+      query: {
+        email: email.trim(),
+        turnstile: turnstileToken,
+      },
+    });
+    turnstileRef.current?.reset();
+    setTurnstileToken(undefined);
+    setResendSeconds(RESEND_COOLDOWN_SECONDS);
+  }
+
+  async function onSubmit(data: RegisterSchema) {
+    try {
+      const affCodeRaw = data.aff_code?.trim() || getCookie(AFF_CODE_KEY);
+      const affCode = typeof affCodeRaw === "string" ? affCodeRaw : undefined;
+      const email = data.email?.trim() || undefined;
+      const username = status?.email_verification
+        ? (email ?? "")
+        : data.username.trim();
+      await registerMutation.mutateAsync({
+        body: {
+          username,
+          password: data.password,
+          email,
+          verification_code: data.verification_code?.trim() || undefined,
+          aff_code: affCode,
+          customer_type: "consumer",
+          turnstile: turnstileToken,
+          ...termsShown,
+        },
+      });
+      deleteCookie(AFF_CODE_KEY);
+      router.push("/login");
+    } catch (e) {
+      const detail = extractErrorDetail(e);
+      logChatDebug("auth.register_error", { error: detail });
+      turnstileRef.current?.reset();
+      setTurnstileToken(undefined);
+    }
+  }
+
+  const showPasswordForm = status?.password_register_enabled !== false;
+  const emailAsUsername = status?.email_verification === true;
+  const turnstileRequired = status?.turnstile_check === true;
+
+  const formValues = form.watch();
+  const trimmedEmail = formValues.email?.trim() || "";
+  const trimmedCode = formValues.verification_code?.trim() || "";
+  const isValid = safeParse(registerChecker, {
+    username: emailAsUsername ? trimmedEmail : formValues.username,
+    password: formValues.password,
+  }).success;
+
+  function verificationButtonLabel() {
+    if (verificationMutation.isPending) return t("AUTH.VERIFICATION.SENDING");
+    if (resendSeconds > 0)
+      return t("AUTH.VERIFICATION.RESEND_IN", { seconds: resendSeconds });
+    if (verificationMutation.isSuccess) return t("AUTH.VERIFICATION.RESEND");
+    return t("AUTH.VERIFICATION.SEND_CODE");
+  }
+
+  const submitDisabled =
+    !isValid ||
+    registerMutation.isPending ||
+    (turnstileRequired && !turnstileToken) ||
+    (emailAsUsername && !trimmedCode);
+
+  return (
+    <GlassAuthCard
+      title={t("AUTH.REGISTER.TITLE")}
+      description={t("AUTH.REGISTER.DESCRIPTION", APP_VALUES)}
+    >
+      <div className="space-y-6">
+        {showPasswordForm && (
+          <Form {...form}>
+            <form
+              onSubmit={(e) => {
+                // The username input is not rendered in email mode, so the schema's
+                // required username would fail validation with no visible error.
+                if (emailAsUsername)
+                  form.setValue(
+                    "username",
+                    form.getValues("email")?.trim() ?? "",
+                  );
+                return form.handleSubmit(onSubmit)(e);
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-3">
+                {!emailAsUsername && (
+                  <MyFormInput
+                    control={form.control}
+                    name="username"
+                    schema={registerSchema}
+                    label={t("AUTH.FORM.USERNAME")}
+                    type="text"
+                    autoComplete="username"
+                    placeholder={t("AUTH.FORM.USERNAME_PLACEHOLDER")}
+                    className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                  />
+                )}
+
+                {status?.email_verification && (
+                  <div className="space-y-1.5">
+                    <MyFormInput
+                      control={form.control}
+                      name="email"
+                      schema={registerSchema}
+                      label={t("AUTH.FORM.EMAIL")}
+                      type="email"
+                      autoComplete="email"
+                      placeholder={t("AUTH.FORM.EMAIL_PLACEHOLDER")}
+                      className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                    />
+                    {verificationMutation.error && (
+                      <p className="text-destructive text-xs font-medium">
+                        {t("AUTH.VERIFICATION.FAILED")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <MyFormInput
+                  control={form.control}
+                  name="password"
+                  schema={registerSchema}
+                  label={t("AUTH.FORM.PASSWORD")}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={t("AUTH.FORM.PASSWORD_PLACEHOLDER")}
+                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                />
+
+                {status?.email_verification && (
+                  <div className="space-y-1.5">
+                    <label className="text-foreground text-sm font-medium">
+                      {t("AUTH.FORM.VERIFICATION_CODE")}
+                    </label>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <MyFormInput
+                          control={form.control}
+                          name="verification_code"
+                          schema={registerSchema}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder={t(
+                            "AUTH.FORM.VERIFICATION_CODE_PLACEHOLDER",
+                          )}
+                          className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendCode}
+                        disabled={
+                          !trimmedEmail ||
+                          verificationMutation.isPending ||
+                          resendSeconds > 0
+                        }
+                        className="h-11 shrink-0 rounded-2xl px-4 text-xs"
+                      >
+                        {verificationButtonLabel()}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <MyFormInput
+                  control={form.control}
+                  name="aff_code"
+                  schema={registerSchema}
+                  label={t("AUTH.FORM.AFF_CODE")}
+                  type="text"
+                  autoComplete="off"
+                  placeholder={t("AUTH.FORM.AFF_CODE_PLACEHOLDER")}
+                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                />
+              </div>
+
+              {turnstileRequired && status?.turnstile_site_key && (
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={status.turnstile_site_key}
+                    onSuccess={setTurnstileToken}
+                  />
+                </div>
+              )}
+
+              {registerMutation.error && (
+                <p className="text-destructive text-center text-xs font-medium">
+                  {registerMutation.error.message}
+                </p>
+              )}
+
+              <TermsNotice variant="register" />
+
+              <Button
+                type="submit"
+                disabled={submitDisabled}
+                className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+              >
+                {registerMutation.isPending
+                  ? t("AUTH.REGISTERING")
+                  : t("AUTH.REGISTER.BUTTON")}
+              </Button>
+            </form>
+          </Form>
+        )}
+
+        {!showPasswordForm &&
+          turnstileRequired &&
+          status?.turnstile_site_key && (
+            <div className="flex justify-center">
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={status.turnstile_site_key}
+                onSuccess={setTurnstileToken}
+              />
+            </div>
+          )}
+
+        {status && (
+          <OAuthButtons
+            status={status}
+            signup={{ customerType: "consumer" }}
+            termsVariant="register"
+            notice={
+              showPasswordForm ? undefined : <TermsNotice variant="register" />
+            }
+            turnstileToken={turnstileToken}
+            onTurnstileSpent={() => {
+              turnstileRef.current?.reset();
+              setTurnstileToken(undefined);
+            }}
+          />
+        )}
+
+        <p className="text-muted-foreground text-center text-sm">
+          {t("AUTH.ALREADY_HAVE_ACCOUNT")}{" "}
+          <Link
+            href="/login"
+            className="text-foreground font-medium hover:underline"
+          >
+            {t("AUTH.LOGIN.BUTTON")}
+          </Link>
+        </p>
+      </div>
+    </GlassAuthCard>
+  );
+}

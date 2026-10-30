@@ -1,0 +1,183 @@
+import { getModelByName } from "@/server/models/pricing/pricing.service";
+import { GUEST_USER_ID, msg } from "@/lib/config/constants";
+import { uid } from "@/lib/utils/base";
+import { API_ENDPOINTS } from "@/lib/ai/endpoints";
+import { groupHeader, upstreamApiUrl } from "@/server/constants";
+import { serverEnv } from "@/server/env";
+import { resumableResponse } from "./stream-buffer";
+
+const FORWARD_RESPONSE_HEADERS = [
+  "content-type",
+  "x-oneapi-request-id",
+  "x-newapi-dropped-params",
+] as const;
+
+type WireBody = { model?: string; group?: string | null } & Record<
+  string,
+  unknown
+>;
+
+export async function forwardChatCompletions(args: {
+  apiKey: string;
+  userId: number;
+  body: WireBody;
+  requestId: string | null;
+  group?: string | null;
+}): Promise<Response> {
+  const model = typeof args.body.model === "string" ? args.body.model : "";
+
+  const onGuestKey =
+    args.userId === GUEST_USER_ID || args.apiKey === serverEnv.guestApiKey;
+  if (onGuestKey && !(await getModelByName(model))?.is_free) {
+    return new Response(
+      JSON.stringify({
+        error:
+          args.userId === GUEST_USER_ID
+            ? msg("ERRORS.UNAUTHORIZED")
+            : `Your session expired, so this request used the guest key (free models only). Log in again to use ${model}.`,
+      }),
+      { status: 401, headers: { "content-type": "application/json" } },
+    );
+  }
+
+  const group = args.body.group ?? args.group;
+  const wire = { ...args.body };
+  delete wire.group;
+
+  const abort = new AbortController();
+  const upstreamPromise = fetch(
+    `${upstreamApiUrl}${API_ENDPOINTS.chatCompletions}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.apiKey}`,
+        "Content-Type": "application/json",
+        ...groupHeader(group),
+        "x-request-id": args.requestId ?? uid(),
+      },
+      body: JSON.stringify(wire),
+      signal: abort.signal,
+    },
+  );
+
+  const winner = await Promise.race([
+    upstreamPromise,
+    new Promise<"slow">((res) => setTimeout(() => res("slow"), EARLY_FLUSH_MS)),
+  ]);
+  if (winner !== "slow") {
+    const upstream = winner;
+    const headers = new Headers();
+    for (const h of FORWARD_RESPONSE_HEADERS) {
+      const v = upstream.headers.get(h);
+      if (v) headers.set(h, v);
+    }
+    if (!upstream.ok || !upstream.body)
+      return new Response(upstream.body, { status: upstream.status, headers });
+    return resumableResponse(
+      upstream.body,
+      args.userId,
+      abort,
+      upstream.status,
+      headers,
+    );
+  }
+
+  // Cloudflare kills a byte-less origin response at ~100s (524, whose raw HTML
+  // lands in the chat as the "reply"), so commit to a 200 SSE now and heartbeat.
+  const enc = new TextEncoder();
+  // Pull-driven on purpose: a free-running enqueue loop lets a stalled client
+  // accumulate the whole completion in the controller queue.
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  let ping: ReturnType<typeof setInterval> | null = null;
+  const stopPing = () => {
+    if (ping) clearInterval(ping);
+    ping = null;
+  };
+  const writeError = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    message: string,
+  ) => {
+    try {
+      controller.enqueue(
+        enc.encode(`data: ${JSON.stringify({ error: { message } })}\n\n`),
+      );
+      controller.enqueue(enc.encode("data: [DONE]\n\n"));
+    } catch {}
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      ping = setInterval(() => {
+        try {
+          controller.enqueue(enc.encode(": keepalive\n\n"));
+        } catch {
+          stopPing();
+        }
+      }, KEEPALIVE_MS);
+      controller.enqueue(enc.encode(": keepalive\n\n"));
+      try {
+        const upstream = await upstreamPromise;
+        stopPing();
+        if (!upstream.ok || !upstream.body) {
+          const text = await upstream.text().catch(() => "");
+          writeError(controller, compactErrorText(text, upstream.status));
+          controller.close();
+        } else {
+          reader = upstream.body.getReader();
+        }
+      } catch (e) {
+        stopPing();
+        writeError(controller, String(e).slice(0, 300));
+        try {
+          controller.close();
+        } catch {}
+      }
+    },
+    async pull(controller) {
+      if (!reader) return;
+      try {
+        const chunk = await reader.read();
+        if (chunk.done) {
+          reader = null;
+          controller.close();
+        } else {
+          controller.enqueue(chunk.value);
+        }
+      } catch (e) {
+        reader = null;
+        writeError(controller, String(e).slice(0, 300));
+        try {
+          controller.close();
+        } catch {}
+      }
+    },
+    cancel() {
+      stopPing();
+      reader?.cancel().catch(() => undefined);
+      reader = null;
+      abort.abort();
+    },
+  });
+  return resumableResponse(
+    stream,
+    args.userId,
+    abort,
+    200,
+    new Headers({ "content-type": "text/event-stream" }),
+  );
+}
+
+const EARLY_FLUSH_MS = 30_000;
+const KEEPALIVE_MS = 15_000;
+
+function compactErrorText(text: string, status: number): string {
+  const plain = text
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const detail = plain.slice(0, 200);
+  return detail
+    ? `Upstream error (HTTP ${status}): ${detail}`
+    : `Upstream error (HTTP ${status})`;
+}

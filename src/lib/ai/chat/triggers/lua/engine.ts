@@ -1,0 +1,378 @@
+import type { TriggerContext } from "../types";
+import { buildLuaApi } from "./api";
+
+type LuaEngineLike = {
+  global: {
+    set: (name: string, value: unknown) => void;
+    get: (name: string) => unknown;
+    close: () => void;
+  };
+  doString: (code: string) => Promise<unknown>;
+};
+
+type EngineState = {
+  engine?: LuaEngineLike;
+  code?: string;
+  queue: Promise<unknown>;
+  idleTimer?: ReturnType<typeof setTimeout>;
+};
+
+// Each live engine pins a 16MB WebAssembly.Memory only global.close() frees (measured 4 -> 9 over one load run).
+const ENGINE_IDLE_MS = 60_000;
+
+export const luaSafeIds = new Set<string>();
+export const luaLowLevelIds = new Set<string>();
+
+let factoryPromise: Promise<LuaFactoryLike> | null = null;
+const engines = new Map<string, EngineState>();
+
+async function loadJsonLua(): Promise<string> {
+  if (typeof window === "undefined") {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    return readFile(join(process.cwd(), "public", "lua", "json.lua"), "utf-8");
+  }
+  const res = await fetch("/lua/json.lua");
+  return res.ok ? res.text() : "";
+}
+
+type LuaFactoryLike = {
+  createEngine: (o: object) => Promise<LuaEngineLike>;
+};
+
+async function getFactory(): Promise<LuaFactoryLike> {
+  if (!factoryPromise) {
+    factoryPromise = (async () => {
+      const { LuaFactory } = await import("wasmoon");
+      const factory = new LuaFactory();
+      await factory.mountFile("json.lua", await loadJsonLua());
+      return factory;
+    })();
+  }
+  return factoryPromise;
+}
+
+function getState(mode: string): EngineState {
+  let s = engines.get(mode);
+  if (!s) {
+    s = { queue: Promise.resolve() };
+    engines.set(mode, s);
+  }
+  return s;
+}
+
+function closeEngine(state: EngineState): void {
+  if (state.idleTimer) {
+    clearTimeout(state.idleTimer);
+    state.idleTimer = undefined;
+  }
+  try {
+    state.engine?.global.close();
+  } catch {}
+  state.engine = undefined;
+  state.code = undefined;
+}
+
+function scheduleIdleClose(state: EngineState): void {
+  if (state.idleTimer) clearTimeout(state.idleTimer);
+  state.idleTimer = setTimeout(() => closeEngine(state), ENGINE_IDLE_MS);
+  // Without unref this pending timer keeps the node process alive.
+  state.idleTimer.unref?.();
+}
+
+function luaCodeWrapper(code: string): string {
+  return `
+json = require 'json'
+
+function getChat(id, index)
+    return json.decode(getChatMain(id, index))
+end
+
+function getFullChat(id)
+    return json.decode(getFullChatMain(id))
+end
+
+function setFullChat(id, value)
+    setFullChatMain(id, json.encode(value))
+end
+
+function log(value)
+    logMain(json.encode(value))
+end
+
+function getLoreBooks(id, search)
+    return json.decode(getLoreBooksMain(id, search))
+end
+
+function loadLoreBooks(id)
+    return json.decode(loadLoreBooksMain(id):await())
+end
+
+function LLM(id, prompt, useMultimodal, options)
+    useMultimodal = useMultimodal or false
+    options = options or {}
+    return json.decode(LLMMain(id, json.encode(prompt), useMultimodal, json.encode(options)):await())
+end
+
+function axLLM(id, prompt, useMultimodal, options)
+    useMultimodal = useMultimodal or false
+    options = options or {}
+    return json.decode(axLLMMain(id, json.encode(prompt), useMultimodal, json.encode(options)):await())
+end
+
+function getCharacterImage(id)
+    return getCharacterImageMain(id):await()
+end
+
+function getPersonaImage(id)
+    return getPersonaImageMain(id):await()
+end
+
+local editRequestFuncs = {}
+local editDisplayFuncs = {}
+local editInputFuncs = {}
+local editOutputFuncs = {}
+
+function listenEdit(type, func)
+    if type == 'editRequest' then
+        editRequestFuncs[#editRequestFuncs + 1] = func
+        return
+    end
+
+    if type == 'editDisplay' then
+        editDisplayFuncs[#editDisplayFuncs + 1] = func
+        return
+    end
+
+    if type == 'editInput' then
+        editInputFuncs[#editInputFuncs + 1] = func
+        return
+    end
+
+    if type == 'editOutput' then
+        editOutputFuncs[#editOutputFuncs + 1] = func
+        return
+    end
+
+    throw('Invalid type')
+end
+
+function getState(id, name)
+    local escapedName = "__"..name
+    return json.decode(getChatVar(id, escapedName))
+end
+
+function setState(id, name, value)
+    local escapedName = "__"..name
+    setChatVar(id, escapedName, json.encode(value))
+end
+
+function async(callback)
+    return function(...)
+        local co = coroutine.create(callback)
+        local safe, result = coroutine.resume(co, ...)
+
+        return Promise.create(function(resolve, reject)
+            local checkresult
+            local step = function()
+                if coroutine.status(co) == "dead" then
+                    local send = safe and resolve or reject
+                    return send(result)
+                end
+
+                safe, result = coroutine.resume(co)
+                checkresult()
+            end
+
+            checkresult = function()
+                if safe and result == Promise.resolve(result) then
+                    result:finally(step)
+                else
+                    step()
+                end
+            end
+
+            checkresult()
+        end)
+    end
+end
+
+callListenMain = async(function(type, id, value, meta)
+    local realValue = json.decode(value)
+    local realMeta = json.decode(meta)
+
+    if type == 'editRequest' then
+        for _, func in ipairs(editRequestFuncs) do
+            realValue = func(id, realValue, realMeta)
+        end
+    end
+
+    if type == 'editDisplay' then
+        for _, func in ipairs(editDisplayFuncs) do
+            realValue = func(id, realValue, realMeta)
+        end
+    end
+
+    if type == 'editInput' then
+        for _, func in ipairs(editInputFuncs) do
+            realValue = func(id, realValue, realMeta)
+        end
+    end
+
+    if type == 'editOutput' then
+        for _, func in ipairs(editOutputFuncs) do
+            realValue = func(id, realValue, realMeta)
+        end
+    end
+
+    return json.encode(realValue)
+end)
+
+${code}
+`;
+}
+
+export type RunScriptedArgs = {
+  code: string;
+  mode: string;
+  ctx: TriggerContext;
+  lowLevelAccess: boolean;
+  data?: unknown;
+  meta?: object;
+};
+
+export type RunScriptedResult = {
+  res: unknown;
+  stopSending: boolean;
+};
+
+export async function runScripted(
+  args: RunScriptedArgs,
+): Promise<RunScriptedResult> {
+  const state = getState(args.mode);
+  const run = state.queue.then(async (): Promise<RunScriptedResult> => {
+    const flags = { stopSending: false };
+    if (args.code !== state.code) {
+      closeEngine(state);
+      const factory = await getFactory();
+      state.engine = await factory.createEngine({ injectObjects: true });
+      const api = buildLuaApi(args.ctx, flags);
+      for (const [name, fn] of Object.entries(api)) {
+        state.engine.global.set(name, fn);
+      }
+      await state.engine.doString(luaCodeWrapper(args.code));
+      state.code = args.code;
+    } else if (state.engine) {
+      const api = buildLuaApi(args.ctx, flags);
+      for (const [name, fn] of Object.entries(api)) {
+        state.engine.global.set(name, fn);
+      }
+    }
+    const engine = state.engine;
+    if (!engine) return { res: undefined, stopSending: false };
+
+    // editDisplay deliberately gets NO key: every safe()/low() check then fails,
+    // which is what makes display handlers read-only.
+    const accessKey = crypto.randomUUID();
+    if (args.mode !== "editDisplay") {
+      luaSafeIds.add(accessKey);
+      if (args.lowLevelAccess) luaLowLevelIds.add(accessKey);
+    }
+    try {
+      let res: unknown;
+      if (
+        args.mode === "start" ||
+        args.mode === "input" ||
+        args.mode === "output"
+      ) {
+        const entry = {
+          start: "onStart",
+          input: "onInput",
+          output: "onOutput",
+        }[args.mode];
+        const func = engine.global.get(entry) as
+          ((key: string) => Promise<unknown>) | undefined;
+        if (func) res = await func(accessKey);
+      } else if (args.mode.startsWith("edit")) {
+        const func = engine.global.get("callListenMain") as
+          | ((
+              mode: string,
+              key: string,
+              data: string,
+              meta: string,
+            ) => Promise<string>)
+          | undefined;
+        if (func) {
+          const raw = await func(
+            args.mode,
+            accessKey,
+            JSON.stringify(args.data ?? null),
+            JSON.stringify(args.meta ?? {}),
+          );
+          try {
+            res = JSON.parse(raw);
+          } catch {
+            res = undefined;
+          }
+        }
+      }
+      return { res, stopSending: flags.stopSending };
+    } finally {
+      luaSafeIds.delete(accessKey);
+      luaLowLevelIds.delete(accessKey);
+      scheduleIdleClose(state);
+    }
+  });
+  state.queue = run.catch(() => undefined);
+  return run;
+}
+
+export function extractLuaCodes(
+  scripts: { effect: { type: string; code?: unknown }[] }[],
+): string[] {
+  const out: string[] = [];
+  for (const s of scripts) {
+    const e = s.effect?.[0];
+    if (e?.type === "triggerlua" && typeof e.code === "string" && e.code) {
+      out.push(e.code);
+    }
+  }
+  return out;
+}
+
+export async function runLuaEditTrigger<T>(
+  luaCodes: string[],
+  mode: "editinput" | "editoutput" | "editdisplay" | "editrequest",
+  ctx: TriggerContext,
+  content: T,
+): Promise<T> {
+  const editMode = {
+    editinput: "editInput",
+    editoutput: "editOutput",
+    editdisplay: "editDisplay",
+    editrequest: "editRequest",
+  }[mode];
+  let data: unknown = content;
+  try {
+    for (const code of luaCodes) {
+      const result = await runScripted({
+        code,
+        mode: editMode,
+        ctx,
+        lowLevelAccess: false,
+        data,
+      });
+      // Adopted only when the runtime kind matches: a script returning a table for a string breaks T silently.
+      const next = result.res ?? data;
+      if (
+        Array.isArray(next) === Array.isArray(data) &&
+        typeof next === typeof data
+      ) {
+        data = next;
+      }
+    }
+    return data as T;
+  } catch {
+    return content;
+  }
+}

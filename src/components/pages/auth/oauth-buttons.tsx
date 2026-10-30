@@ -1,0 +1,206 @@
+"use client";
+
+import {
+  useTermsShown,
+  type TermsNoticeVariant,
+} from "@/components/pages/auth/terms-notice";
+import { Icon } from "@/components/ui/icon";
+import { AFF_CODE_KEY } from "@/lib/config/constants";
+import { env } from "@/lib/config/env";
+import { rpc } from "@/lib/rpc";
+import { handleElysia } from "@/lib/utils/base";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import { extractErrorDetail } from "@/lib/utils/client";
+import type { CustomerType } from "@/lib/validation/auth";
+import type { StatusData } from "@/openapi";
+import { getCookie } from "cookies-next/client";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+
+type OAuthButtonsProps = {
+  status: StatusData;
+  /** The parent form's Turnstile token; the gateway challenges every anonymous OAuth start. */
+  turnstileToken?: string;
+  /** Called when a start failed after spending the token, so the parent can reissue it. */
+  onTurnstileSpent?: () => void;
+  /** Set on the signup page: the gateway stores the customer type on an account this login creates. */
+  signup?: { customerType: CustomerType };
+  /** Rendered above the buttons, so it is read before an account gets created. */
+  notice?: React.ReactNode;
+  /** The terms notice the page shows, recorded on an account this login creates. */
+  termsVariant: TermsNoticeVariant;
+};
+
+type OAuthProvider = {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+};
+
+// redirect_uri must stay the BARE ${server}/oauth/<provider>: new-api's SPA owns
+// that route, and pointing it at the /api Go handler breaks the round-trip.
+export function buildOAuthAuthorizeUrl(
+  provider: string,
+  status: StatusData,
+  state: string,
+): string | null {
+  const serverAddress = status.server_address || env.apiUrl;
+  const redirectUri = `${serverAddress}/oauth/${provider}`;
+  const encodedRedirect = encodeURIComponent(redirectUri);
+  switch (provider) {
+    case "github":
+      return `https://github.com/login/oauth/authorize?client_id=${status.github_client_id}&state=${state}&scope=user:email&redirect_uri=${encodedRedirect}`;
+    case "discord":
+      return `https://discord.com/api/oauth2/authorize?client_id=${status.discord_client_id}&state=${state}&response_type=code&scope=identify+email&redirect_uri=${encodedRedirect}`;
+    case "google":
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${status.google_client_id}&state=${state}&response_type=code&scope=openid+email+profile&redirect_uri=${encodedRedirect}`;
+    case "oidc":
+      return `${status.oidc_authorization_endpoint}?client_id=${status.oidc_client_id}&state=${state}&response_type=code&scope=openid+profile+email&redirect_uri=${encodedRedirect}`;
+    case "linuxdo":
+      return `https://connect.linux.do/oauth2/authorize?client_id=${status.linuxdo_client_id}&state=${state}&response_type=code&redirect_uri=${encodedRedirect}`;
+  }
+  const custom = (status.custom_oauth_providers ?? []).find(
+    (p) => p.slug === provider,
+  );
+  if (!custom) return null;
+  const params = new URLSearchParams({
+    client_id: custom.client_id,
+    state,
+    response_type: "code",
+    scope: custom.scopes || "openid profile email",
+    redirect_uri: redirectUri,
+  });
+  return `${custom.authorization_endpoint}?${params.toString()}`;
+}
+
+export function OAuthButtons(props: OAuthButtonsProps) {
+  const t = useTranslations();
+  const [loading, setLoading] = useState<string | null>(null);
+  const termsShown = useTermsShown(props.termsVariant);
+
+  const providers: OAuthProvider[] = [];
+
+  if (props.status.github_oauth) {
+    providers.push({
+      key: "github",
+      label: t("AUTH.OAUTH.GITHUB"),
+      icon: <Icon name="brand-github" className="h-4 w-4" />,
+    });
+  }
+  if (props.status.discord_oauth) {
+    providers.push({
+      key: "discord",
+      label: t("AUTH.OAUTH.DISCORD"),
+      icon: <Icon name="brand-discord" className="h-4 w-4" />,
+    });
+  }
+  if (props.status.google_oauth) {
+    providers.push({
+      key: "google",
+      label: t("AUTH.OAUTH.GOOGLE"),
+      icon: <Icon name="brand-google" className="h-4 w-4" />,
+    });
+  }
+  if (props.status.oidc_enabled) {
+    providers.push({
+      key: "oidc",
+      label: t("AUTH.OAUTH.OIDC"),
+      icon: <Icon name="log-in" className="h-4 w-4" />,
+    });
+  }
+  if (props.status.linuxdo_oauth) {
+    providers.push({
+      key: "linuxdo",
+      label: t("AUTH.OAUTH.LINUXDO"),
+      icon: <Icon name="log-in" className="h-4 w-4" />,
+    });
+  }
+
+  for (const custom of props.status.custom_oauth_providers ?? []) {
+    providers.push({
+      key: custom.slug,
+      label: custom.name,
+      icon: <Icon name="log-in" className="h-4 w-4" />,
+    });
+  }
+
+  if (providers.length === 0) return null;
+
+  const awaitingTurnstile =
+    props.status.turnstile_check === true && !props.turnstileToken;
+
+  async function handleOAuth(provider: OAuthProvider) {
+    setLoading(provider.key);
+    logChatDebug("auth.oauth.start", { provider: provider.key });
+    try {
+      const callbackUrl = `${window.location.origin}/api/auth/account/oauth/callback`;
+      const affCode = getCookie(AFF_CODE_KEY);
+      const state = handleElysia(
+        await rpc.api.auth.account.oauth.state.get({
+          query: {
+            provider: provider.key,
+            redirect: callbackUrl,
+            aff: typeof affCode === "string" ? affCode : undefined,
+            customer_type: props.signup?.customerType,
+            turnstile: props.turnstileToken,
+            ...termsShown,
+          },
+        }),
+      );
+      const url = buildOAuthAuthorizeUrl(provider.key, props.status, state);
+      if (!url) {
+        logChatDebug("auth.oauth.no_url", { provider: provider.key });
+        return;
+      }
+      logChatDebug("auth.oauth.redirect", {
+        provider: provider.key,
+        host: new URL(url).host,
+        hasClientId: !url.includes("client_id=undefined"),
+      });
+      window.location.assign(url);
+    } catch (e) {
+      logChatDebug("auth.oauth.error", {
+        provider: provider.key,
+        error: extractErrorDetail(e),
+      });
+      props.onTurnstileSpent?.();
+      throw e;
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="relative flex items-center gap-4">
+        <div className="bg-border/60 h-px flex-1" />
+        <span className="text-muted-foreground text-xs tracking-wider uppercase">
+          {t("AUTH.OR_CONTINUE_WITH")}
+        </span>
+        <div className="bg-border/60 h-px flex-1" />
+      </div>
+
+      {props.notice}
+
+      <div className="flex flex-col gap-2">
+        {providers.map((provider) => (
+          <button
+            key={provider.key}
+            onClick={() => handleOAuth(provider)}
+            disabled={loading !== null || awaitingTurnstile}
+            className="border-border/60 bg-background/60 hover:bg-accent text-foreground flex h-11 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {loading === provider.key ? (
+              <span className="text-muted-foreground text-xs">...</span>
+            ) : (
+              <>
+                {provider.icon}
+                {provider.label}
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

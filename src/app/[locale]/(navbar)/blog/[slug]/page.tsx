@@ -1,0 +1,95 @@
+import { BlogPost } from "@/components/pages/blog/blog-post";
+import { faqI18nKey, getPost, translated } from "@/components/pages/blog/posts";
+import { localeUrl } from "@/i18n/navigation";
+import { APP_VALUES } from "@/lib/config/constants";
+import { JsonLd } from "@/lib/seo/json-ld";
+import {
+  getPageMetadata,
+  getSeoTimestamps,
+  notFoundMetadata,
+  ogBadge,
+} from "@/lib/seo/metadata";
+import {
+  buildArticleSchema,
+  buildBreadcrumbListSchema,
+  buildFAQPageSchema,
+} from "@/lib/seo/structured-data";
+import { serverLocale } from "@/lib/utils/server";
+import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+
+interface PageProps {
+  params: Promise<{ locale: string; slug: string }>;
+}
+
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
+  const post = getPost(params.slug);
+  if (!post) return notFoundMetadata();
+  const locale = await serverLocale(props);
+  const t = await getTranslations({ locale });
+
+  const { title, description } = translated(t, post);
+
+  return getPageMetadata({
+    locale,
+    href: { pathname: "/blog/[slug]", params: { slug: post.slug } },
+    title: t("BLOG.POST_META_TITLE", { ...APP_VALUES, title }),
+    description,
+    keywords: post.tags.join(", "),
+    ogImage: ogBadge("banner", locale),
+  });
+}
+
+export default async function BlogPostPage(props: PageProps) {
+  const params = await props.params;
+  const post = getPost(params.slug);
+  if (!post) notFound();
+
+  const locale = await serverLocale(props);
+  const t = await getTranslations({ locale });
+  const ts = getSeoTimestamps(`blog/${post.slug}`);
+  const faqKey = faqI18nKey(post);
+  const url = localeUrl(locale, {
+    pathname: "/blog/[slug]",
+    params: { slug: post.slug },
+  });
+  const { title, description, author } = translated(t, post);
+
+  return (
+    <>
+      <JsonLd
+        id={`blog-${post.slug}-breadcrumb`}
+        data={buildBreadcrumbListSchema([
+          { name: t("NAV.HOME"), url: localeUrl(locale, "/") },
+          { name: t("BLOG.TITLE"), url: localeUrl(locale, "/blog") },
+          { name: title, url },
+        ])}
+      />
+      <JsonLd
+        id={`blog-${post.slug}-article`}
+        data={buildArticleSchema({
+          locale,
+          headline: title,
+          description,
+          url,
+          datePublished: ts?.published ?? post.date,
+          dateModified: ts?.modified ?? post.date,
+          author,
+        })}
+      />
+      {faqKey && (
+        <JsonLd
+          id={`blog-${post.slug}-faq`}
+          data={buildFAQPageSchema(
+            ([1, 2, 3] as const).map((n) => ({
+              question: t(`${faqKey}.FAQ_${n}_Q`, APP_VALUES),
+              answer: t(`${faqKey}.FAQ_${n}_A`, APP_VALUES),
+            })),
+          )}
+        />
+      )}
+      <BlogPost slug={params.slug} />
+    </>
+  );
+}

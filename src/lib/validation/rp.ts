@@ -1,0 +1,136 @@
+import type { Static } from "elysia";
+import { t } from "elysia";
+import { nullable, samplingNullable } from "./helpers";
+import { tokenizerRef } from "./tokenizer";
+import { reasoningEffort } from "./chat";
+import { MAX_CHAT_MEMORY } from "../config/constants";
+
+export const MAX_NAME_LEN = 200;
+export const MAX_DESC_LEN = 200_000;
+export const MAX_KEYS_PER_ENTRY = 64;
+export const MAX_KEY_LEN = 200;
+
+export const lorebookBody = t.Object({
+  name: t.String({ minLength: 1, maxLength: MAX_NAME_LEN }),
+  description: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  greeting: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  avatarMediaId: t.Optional(nullable(t.String({ maxLength: 64 }))),
+  scanDepth: t.Number({ minimum: 0, maximum: 100, default: 4 }),
+  tokenBudget: t.Number({ minimum: 100, maximum: 1_000_000, default: 1500 }),
+  recursiveScanning: t.Boolean({ default: false }),
+});
+export type LorebookBody = Static<typeof lorebookBody>;
+
+export const LOREBOOK_INJECTION_ROLES = [
+  "user",
+  "system",
+  "assistant",
+] as const;
+export type LorebookInjectionRole = (typeof LOREBOOK_INJECTION_ROLES)[number];
+export const lorebookInjectionRole = t.Union(
+  LOREBOOK_INJECTION_ROLES.map((r) => t.Literal(r)),
+);
+
+export const lorebookEntryBody = t.Object({
+  keys: t.Array(t.String({ maxLength: MAX_KEY_LEN }), {
+    maxItems: MAX_KEYS_PER_ENTRY,
+  }),
+  secondaryKeys: nullable(
+    t.Array(t.String({ maxLength: MAX_KEY_LEN }), {
+      maxItems: MAX_KEYS_PER_ENTRY,
+    }),
+  ),
+  content: t.String({ minLength: 1, maxLength: MAX_DESC_LEN }),
+  constant: t.Boolean({ default: false }),
+  selective: t.Boolean({ default: false }),
+  priority: t.Integer({ default: 100 }),
+  orderIndex: t.Integer({ default: 0 }),
+  enabled: t.Boolean({ default: true }),
+  matchWholeWords: t.Boolean({ default: false }),
+  injectionRole: t.Union(lorebookInjectionRole.anyOf, { default: "system" }),
+});
+export type LorebookEntryBody = Static<typeof lorebookEntryBody>;
+
+export const samplingPresetBody = t.Object({
+  name: t.String({ minLength: 1, maxLength: MAX_NAME_LEN }),
+  ...samplingNullable({ temperatureMax: 4 }),
+  streamingEnabled: nullable(t.Boolean()),
+  autoScrollStream: nullable(t.Boolean()),
+  showReasoning: nullable(t.Boolean()),
+  reasoningEffort: nullable(t.Union(reasoningEffort.anyOf)),
+  chatMemory: nullable(t.Number({ minimum: 1, maximum: MAX_CHAT_MEMORY })),
+  extraBody: nullable(t.String({ maxLength: 8_192 })),
+  providers: nullable(t.String({ maxLength: 4_096 })),
+  promptTemplate: nullable(t.String({ maxLength: 131_072 })),
+  mainPrompt: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  postHistory: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  postHistoryRole: nullable(t.Union([t.Literal("system"), t.Literal("user")])),
+  prefill: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  continuePrompt: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  impersonatePrompt: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  tokenizer: nullable(tokenizerRef),
+  forceAlternateRoles: t.Boolean({ default: false }),
+  noSystemRole: t.Boolean({ default: false }),
+  mustStartWithUserInput: t.Boolean({ default: false }),
+  geminiBlockOff: t.Boolean({ default: false }),
+  disableCaching: t.Boolean({ default: false }),
+  keepSystemRoles: t.Boolean({ default: false }),
+  isDefault: t.Optional(t.Boolean()),
+});
+export type SamplingPresetBody = Static<typeof samplingPresetBody>;
+
+const MAX_BUNDLE_ITEMS = 64;
+
+export const cardBody = t.Object({
+  name: t.String({ minLength: 1, maxLength: MAX_NAME_LEN }),
+  description: nullable(t.String({ maxLength: MAX_DESC_LEN })),
+  personaId: nullable(t.String({ maxLength: 64 })),
+  characterIds: t.Array(t.String({ maxLength: 64 }), {
+    maxItems: MAX_BUNDLE_ITEMS,
+    default: [],
+  }),
+  lorebookIds: t.Array(t.String({ maxLength: 64 }), {
+    maxItems: MAX_BUNDLE_ITEMS,
+    default: [],
+  }),
+});
+export type CardBody = Static<typeof cardBody>;
+
+export const cardApplyMode = t.Union([
+  t.Literal("replace"),
+  t.Literal("merge"),
+]);
+export type CardApplyMode = Static<typeof cardApplyMode>;
+
+export const exportFormat = t.Union([
+  t.Literal("native"),
+  t.Literal("orpg"),
+  t.Literal("sillytavern"),
+]);
+
+export type ExportFormat = Static<typeof exportFormat>;
+
+export const conversationExportFormat = t.Union([
+  t.Literal("native"),
+  t.Literal("orpg"),
+]);
+
+export type ConversationExportFormat = Static<typeof conversationExportFormat>;
+
+export const characterExportFormat = t.Union([
+  t.Literal("png"),
+  t.Literal("charx"),
+  t.Literal("voxta"),
+  t.Literal("json"),
+]);
+
+export type CharacterExportFormat = Static<typeof characterExportFormat>;
+
+export const lorebookExportFormat = t.Union([
+  t.Literal("sillytavern"),
+  t.Literal("agnai"),
+  t.Literal("risu"),
+  t.Literal("ccv3"),
+]);
+
+export type LorebookExportFormat = Static<typeof lorebookExportFormat>;

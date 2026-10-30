@@ -1,0 +1,480 @@
+"use client";
+
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  DefaultChatTransport,
+  streamText,
+  toUIMessageStream,
+  wrapLanguageModel,
+  type ChatTransport,
+  type UIMessageChunk,
+} from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import type { ChatUIMessage } from "@/lib/types";
+import { uid } from "@/lib/utils/base";
+import { extractErrorDetail } from "@/lib/utils/client";
+import { chatReasoningMiddleware } from "@/lib/ai/chat/coalesce-reasoning-middleware";
+import {
+  prepareChatRequest,
+  type PreparedChatRequest,
+} from "@/lib/ai/chat/pipeline/prepare.service";
+import type { AssemblerDeps } from "@/lib/ai/chat/pipeline/deps";
+import {
+  buildFinishMeta,
+  createMetaCollector,
+  makeBuildUsage,
+  type TotalUsage,
+} from "@/lib/ai/chat/pipeline/finish-meta";
+import { makeUpstreamFetch } from "@/lib/ai/chat/provider-mutations";
+import { resumableFetch } from "@/lib/ai/chat/resumable-fetch";
+import type { TokenizerRef } from "@/lib/ai/chat/tokenizer";
+import { CHAT_PROVIDER_NAME, msg } from "@/lib/config/constants";
+import {
+  fingerprintText,
+  logChatDebug,
+  stashOutgoingRequest,
+} from "@/lib/utils/chat-debug-log";
+import {
+  chatGroupAtom,
+  groupByModelAtom,
+  chatModelAtom,
+  chatStore,
+} from "@/store/chat-store";
+import { authUserId } from "@/hooks/auth/auth-hook";
+import getQueryClient from "@/lib/react-query/client";
+import { rpc } from "@/lib/rpc";
+import { handleElysia } from "@/lib/utils/base";
+import { queryKeys } from "@/lib/react-query/keys";
+import { isMediaType } from "@/lib/api/pricing";
+import { gatewayCodeMessage } from "@/lib/api/own-purpose";
+import type { PricingCatalogData } from "@/openapi";
+import { buildChatRequestBody, buildMediaRequestBody } from "./chat-transport";
+import { resolveModelTargetFromStore } from "./resolve-model-target";
+import { makeStreamTimer } from "./stream-timer";
+
+type SendOptions = Parameters<ChatTransport<ChatUIMessage>["sendMessages"]>[0];
+
+// toUIMessageStream flattens the stream error to a STRING, so the detail ships as a
+// JSON envelope the card parses back.
+// The sdk's wording when the response body stops mid-read: the connection
+// dropped, the request itself had succeeded.
+const BODY_READ_FAILED = "Failed to process successful response";
+
+function streamErrorText(error: unknown): string {
+  const detail = extractErrorDetail(error);
+  return JSON.stringify({
+    __unoStreamError: true,
+    message:
+      detail.message === BODY_READ_FAILED
+        ? msg("ERRORS.STREAM_CONNECTION_LOST")
+        : (gatewayCodeMessage(detail.code) ?? detail.message),
+    status: detail.status ?? null,
+    code: detail.code ?? null,
+    requestId: detail.requestId ?? null,
+  });
+}
+
+// Reasoning then streams with NO opening tag, so the extractor must start in
+// reasoning mode or the chain of thought lands in the visible reply.
+function prefillOpensThink(
+  messages: ReadonlyArray<{
+    role: string;
+    parts?: ReadonlyArray<{ type: string; text?: string }>;
+  }>,
+): boolean {
+  const last = messages.at(-1);
+  if (last?.role !== "assistant") return false;
+  const text = (last.parts ?? [])
+    .filter((p) => p.type === "text")
+    .map((p) => p.text ?? "")
+    .join("");
+  const open = text.lastIndexOf("<think>");
+  return open !== -1 && !text.includes("</think>", open);
+}
+
+// The catalog decides media versus text. An empty cache used to mean "text",
+// which sent an image model down chat completions.
+async function isMediaModel(model: string): Promise<boolean> {
+  const client = getQueryClient();
+  const data: PricingCatalogData | undefined =
+    client.getQueryData<PricingCatalogData>(queryKeys.pricingCatalog()) ??
+    (await client
+      .ensureQueryData({
+        queryKey: queryKeys.pricingCatalog(),
+        queryFn: async () =>
+          handleElysia(await rpc.api.models.pricing.catalog.get()),
+      })
+      .catch(() => undefined));
+  return isMediaType(data?.models?.find((m) => m.model_name === model)?.type);
+}
+
+async function mergeDbHistory(
+  convId: string | null,
+  captured: ChatUIMessage[],
+): Promise<ChatUIMessage[]> {
+  if (!convId) return captured;
+  const chatData = await import("@/lib/db/client/data/chat/chat");
+  const db = await chatData.readConvHistoryForSend(convId);
+  const branch = db.branch as unknown as ChatUIMessage[];
+  logChatDebug("send.history_source", {
+    convId,
+    dbBranch: branch.length,
+    dbTotal: db.allIds.size,
+    captured: captured.length,
+    walkTruncated: db.activeCount > branch.length + 1,
+    activeCount: db.activeCount,
+  });
+  if (branch.length === 0) return captured;
+  const capturedIds = new Set(captured.map((m) => m.id));
+  let trimEnd = branch.length;
+  while (trimEnd > 0 && !capturedIds.has(branch[trimEnd - 1].id)) trimEnd--;
+  // No shared id while the screen shows persisted rows means the branch flags are
+  // corrupt (a mass-deactivated root): trust the render.
+  if (trimEnd === 0 && captured.some((m) => db.allIds.has(m.id))) {
+    logChatDebug("send.history_walk_mismatch", { convId });
+    return captured;
+  }
+  const base = trimEnd === 0 ? branch : branch.slice(0, trimEnd);
+  const baseIds = new Set(base.map((m) => m.id));
+  // Only the tail BEYOND the deepest persisted match may join: an earlier unmatched
+  // captured message is a stale sibling from a branch the DB no longer holds active.
+  let lastMatch = -1;
+  for (let i = captured.length - 1; i >= 0; i--) {
+    if (baseIds.has(captured[i].id)) {
+      lastMatch = i;
+      break;
+    }
+  }
+  const suffix = captured
+    .slice(lastMatch + 1)
+    .filter((m) => !baseIds.has(m.id));
+  return [...base, ...suffix];
+}
+
+async function runClientStream(args: {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+  deps: AssemblerDeps;
+  options: SendOptions;
+  getConvId: () => string | null;
+  tokenizer?: TokenizerRef;
+  extraHeaders?: Record<string, string>;
+  includeUsage?: boolean;
+}): Promise<ReadableStream<UIMessageChunk>> {
+  const timer = makeStreamTimer(args.model);
+  const history = await mergeDbHistory(args.getConvId(), args.options.messages);
+  timer.mark("history");
+  const fields = await buildChatRequestBody(args.getConvId);
+  const body = {
+    ...fields,
+    model: args.model,
+    messages: history,
+    ...(args.tokenizer ? { tokenizer: args.tokenizer } : {}),
+  };
+  const prepared: PreparedChatRequest = await prepareChatRequest(
+    args.apiKey,
+    body,
+    authUserId(),
+    args.deps,
+    args.options.abortSignal,
+  );
+  timer.mark("prepared");
+
+  const group = chatStore.get(chatGroupAtom);
+  const pinnedModels = group
+    ? null
+    : Object.keys(chatStore.get(groupByModelAtom));
+
+  const wireOptions = prepared.providerOptions[CHAT_PROVIDER_NAME] ?? {};
+  logChatDebug("request.shape", {
+    model: args.model,
+    selectedModel: chatStore.get(chatModelAtom) ?? null,
+    group: group ?? null,
+    pinnedModels,
+    xGroupSent: group && group !== "auto" ? group : null,
+    prefill: prefillOpensThink(prepared.messagesForUpstream),
+    systemChars: prepared.effectiveSystem?.length ?? 0,
+    messages: prepared.messagesForUpstream.map((m) => ({
+      role: m.role,
+      chars: (m.parts ?? []).reduce(
+        (n, p) =>
+          n + ("text" in p && typeof p.text === "string" ? p.text.length : 0),
+        0,
+      ),
+    })),
+    modelParams: prepared.modelParams,
+    options: Object.fromEntries(
+      Object.entries(wireOptions).map(([k, v]) => [
+        k,
+        typeof v === "number" ||
+        typeof v === "boolean" ||
+        k === "reasoningEffort" ||
+        k === "provider"
+          ? v
+          : typeof v === "string"
+            ? `str(${v.length})`
+            : Array.isArray(v)
+              ? `arr(${v.length})`
+              : `obj(${Object.keys(v ?? {}).length})`,
+      ]),
+    ),
+  });
+
+  stashOutgoingRequest({
+    ts: Date.now(),
+    model: args.model,
+    group: group ?? null,
+    url: args.baseURL,
+    system: prepared.effectiveSystem
+      ? fingerprintText(prepared.effectiveSystem)
+      : null,
+    messages: prepared.messagesForUpstream.map((m) => ({
+      role: m.role,
+      ...fingerprintText(
+        (m.parts ?? [])
+          .filter((p) => "text" in p && typeof p.text === "string")
+          .map((p) => ("text" in p ? p.text : ""))
+          .join("\n"),
+      ),
+    })),
+    modelParams: prepared.modelParams,
+  });
+
+  const collector = createMetaCollector();
+  const startedAt = Date.now();
+  const buildUsage = makeBuildUsage(prepared, startedAt, Date.now);
+  let sawText = false;
+  // Counted so a failure can report how far the stream got: an upstream that
+  // returned nothing and one truncated mid-reply raise the same error, and
+  // only this number tells them apart.
+  let streamedChars = 0;
+  let streamedReasoning = 0;
+  const finishMeta = (
+    totalUsage: TotalUsage | undefined,
+    finishReason?: string,
+  ) =>
+    buildFinishMeta({
+      prepared,
+      collector,
+      buildUsage,
+      totalUsage,
+      speakingCharacterId: body.speakingCharacterId,
+      finishReason,
+      hasText: sawText,
+    });
+
+  if (prepared.stopRequested) {
+    return createUIMessageStream({
+      execute: ({ writer }) => {
+        for (const a of prepared.startAlerts) {
+          writer.write({ type: "data-alert", data: a, transient: true });
+        }
+      },
+    });
+  }
+
+  // The sdk builds the wire body itself, so the billing-group pin cannot ride a
+  // body field and ships as X-Group.
+  const sdk = createOpenAICompatible({
+    name: CHAT_PROVIDER_NAME,
+    baseURL: args.baseURL,
+    apiKey: args.apiKey,
+    // Without stream_options.include_usage the gateway only relays usage when
+    // the upstream volunteers it, and most lanes do not.
+    ...(args.includeUsage ? { includeUsage: true } : {}),
+    ...((group && group !== "auto") || args.extraHeaders
+      ? {
+          headers: {
+            ...(group && group !== "auto" ? { "X-Group": group } : {}),
+            ...args.extraHeaders,
+          },
+        }
+      : {}),
+    fetch: timer.wrapFetch(
+      resumableFetch(makeUpstreamFetch(prepared.bodyMutations)),
+    ),
+  });
+
+  const result = streamText({
+    model: wrapLanguageModel({
+      model: sdk.chatModel(args.model),
+      middleware: chatReasoningMiddleware(
+        prefillOpensThink(prepared.messagesForUpstream),
+      ),
+    }),
+    messages: await convertToModelMessages(prepared.messagesForUpstream),
+    system: prepared.effectiveSystem,
+    // "Keep system roles as written" leaves system messages inside the history.
+    allowSystemInMessages: true,
+    maxRetries: 0,
+    // Streaming errors arrive OFF the send-promise: useChat's onError never sees
+    // them, so this is the only place the real cause can be captured.
+    onError: (event) => {
+      const detail = extractErrorDetail(event.error);
+      const isEmptyStream = detail.message
+        .toLowerCase()
+        .includes("no output generated");
+      // A cut-off is reported by the user rather than caught here, so the
+      // counts have to be in the log they send back.
+      logChatDebug("stream.failed", {
+        model: args.model,
+        group: group ?? null,
+        requestId: collector.requestId,
+        status: detail.status ?? null,
+        code: detail.code ?? null,
+        emptyStream: isEmptyStream,
+        streamedChars,
+        streamedReasoning,
+        elapsedMs: Date.now() - startedAt,
+        message: detail.message.slice(0, 300),
+      });
+      timer.end("error", {
+        status: detail.status ?? null,
+        streamedChars,
+        streamedReasoning,
+      });
+    },
+    ...prepared.modelParams,
+    providerOptions: prepared.providerOptions,
+    ...(args.options.abortSignal
+      ? { abortSignal: args.options.abortSignal }
+      : {}),
+  });
+
+  args.options.abortSignal?.addEventListener(
+    "abort",
+    () => timer.end("aborted", { streamedChars, streamedReasoning }),
+    { once: true },
+  );
+
+  // A body read failing mid-stream reaches only these hooks, never
+  // streamText's onError, so the timing and its cause are logged here too.
+  function failStream(error: unknown): string {
+    const cause =
+      error instanceof Error && error.cause != null
+        ? String(error.cause).slice(0, 200)
+        : null;
+    timer.end("error", { cause, streamedChars, streamedReasoning });
+    return streamErrorText(error);
+  }
+
+  // ai-sdk rejects these terminal promises with AI_NoOutputGeneratedError on a
+  // zero-content close; unawaited they land as UNHANDLED rejections.
+  void Promise.resolve(result.text).catch(() => {});
+  void Promise.resolve(result.finishReason).catch(() => {});
+
+  // A group turn and auto-continue run again with no new user message, and the
+  // ai-sdk seeds that run from a COPY of the last assistant message. A fresh id
+  // makes the copy a SECOND message, so the previous character's reply renders
+  // and persists twice; keeping the id lets the sdk replace its own message.
+  const last = args.options.messages.at(-1);
+  const continuedId =
+    args.options.messageId && last?.role === "assistant"
+      ? last.id === args.options.messageId
+        ? args.options.messageId
+        : null
+      : null;
+  const responseMessageId = continuedId ?? uid();
+  const uiStream = toUIMessageStream({
+    stream: result.stream,
+    generateMessageId: () => responseMessageId,
+    onError: failStream,
+    messageMetadata: ({ part }) => {
+      if (part.type === "text-delta" && part.text) {
+        timer.mark("firstText");
+        timer.tickUi();
+        sawText = true;
+        streamedChars += part.text.length;
+      }
+      if (part.type === "reasoning-delta" && part.text) {
+        timer.mark("firstReasoning");
+        timer.tickUi();
+        streamedReasoning += part.text.length;
+      }
+      if (part.type === "finish-step") {
+        collector.captureHeaders(part.response.headers);
+        return undefined;
+      }
+      if (part.type === "finish") {
+        // A reply that ends because the model hit its cap raises NO error, so
+        // "it just cut off" reaches us with nothing recorded anywhere. Log the
+        // reason and the size whenever the stop was not a natural one.
+        if (part.finishReason && part.finishReason !== "stop") {
+          logChatDebug("stream.truncated", {
+            model: args.model,
+            group: group ?? null,
+            requestId: collector.requestId,
+            finishReason: part.finishReason,
+            streamedChars,
+            streamedReasoning,
+            maxOutputTokens: prepared.modelParams.maxOutputTokens ?? null,
+            outputTokens: part.totalUsage?.outputTokens ?? null,
+            elapsedMs: Date.now() - startedAt,
+          });
+        }
+        timer.end("finish", {
+          finishReason: part.finishReason ?? null,
+          streamedChars,
+          streamedReasoning,
+          outputTokens: part.totalUsage?.outputTokens ?? null,
+        });
+        const meta = finishMeta(part.totalUsage, part.finishReason);
+        return Object.keys(meta).length > 0 ? meta : undefined;
+      }
+      return undefined;
+    },
+  });
+
+  // ALWAYS wrap, even with no start alerts: the raw stream leaks the zero-content
+  // AI_NoOutputGeneratedError as an unhandled rejection (vercel/ai#6879).
+  return createUIMessageStream({
+    onError: failStream,
+    execute: ({ writer }) => {
+      for (const a of prepared.startAlerts) {
+        writer.write({ type: "data-alert", data: a, transient: true });
+      }
+      writer.merge(uiStream);
+    },
+  });
+}
+
+export function makeRoutingTransport(
+  getConvId: () => string | null,
+  onSend?: (messages: ChatUIMessage[]) => void,
+): ChatTransport<ChatUIMessage> {
+  const mediaTransport = new DefaultChatTransport<ChatUIMessage>({
+    api: "/api/ai/chat/stream",
+    body: () => buildMediaRequestBody(getConvId),
+  });
+
+  const sendText = async (
+    modelId: string,
+    options: SendOptions,
+  ): Promise<ReadableStream<UIMessageChunk>> => {
+    const target = await resolveModelTargetFromStore(modelId);
+    return runClientStream({
+      apiKey: target.apiKey,
+      baseURL: target.baseURL,
+      model: target.model,
+      deps: target.deps,
+      options,
+      getConvId,
+      ...(target.tokenizer ? { tokenizer: target.tokenizer } : {}),
+      ...(target.extraHeaders ? { extraHeaders: target.extraHeaders } : {}),
+      ...(target.isCustom ? {} : { includeUsage: true }),
+    });
+  };
+
+  return {
+    sendMessages: async (options) => {
+      onSend?.(options.messages);
+      const modelId = chatStore.get(chatModelAtom) ?? "";
+      if (await isMediaModel(modelId))
+        return mediaTransport.sendMessages(options);
+      return sendText(modelId, options);
+    },
+    reconnectToStream: async () => null,
+  };
+}

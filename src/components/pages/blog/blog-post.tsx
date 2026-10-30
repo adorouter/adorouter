@@ -1,0 +1,191 @@
+import { TOCLayout } from "@/components/layout/docs/toc";
+import { createTOC } from "@/components/layout/docs/toc-utils";
+import { Badge } from "@/components/ui/badge";
+import { TypographicSmokeLazy } from "@/components/ui/fluid-smoke/typographic-smoke-lazy";
+import { Icon } from "@/components/ui/icon";
+import { Link } from "@/i18n/navigation";
+import { getBlogTheme } from "@/lib/config/blog-categories";
+import { APP_VALUES } from "@/lib/config/constants";
+import { cn } from "@/lib/utils";
+import { estimateReadingMinutes } from "@/components/pages/blog/reading-time";
+import { serverLocale } from "@/lib/utils/server";
+import { dayjs } from "@/lib/utils/format/date";
+import type { TOCItemType } from "fumadocs-core/toc";
+import { getTranslations } from "next-intl/server";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import {
+  faqI18nKey,
+  methodI18nKey,
+  tldrI18nKey,
+  getAdjacentPosts,
+  getPost,
+  getRelatedPosts,
+  translated,
+} from "./posts";
+import { PrevNextNav } from "./prev-next-nav";
+import { RelatedPosts } from "./related-posts";
+import { upper } from "@/lib/utils/base";
+
+interface BlogPostProps {
+  slug: string;
+}
+
+export async function BlogPost(props: BlogPostProps) {
+  const locale = await serverLocale();
+  const post = getPost(props.slug);
+  if (!post) notFound();
+
+  const t = await getTranslations();
+  const tr = translated(t, post);
+  const theme = getBlogTheme(post.category);
+  const faqKey = faqI18nKey(post);
+  const tldrKey = tldrI18nKey(post);
+  const methodKey = methodI18nKey(post);
+  const minutes = estimateReadingMinutes(post.wordCount);
+  const adjacent = getAdjacentPosts(post.slug);
+  const related = getRelatedPosts(post.slug);
+  const categoryLabel = t(`BLOG.CATEGORY.${upper(post.category)}`);
+
+  const tocItems: TOCItemType[] = post.headings.map((h) => ({
+    url: `#${h.id}`,
+    title: t(`${post.i18nKey}.${h.i18nLeaf}` as Parameters<typeof t>[0]),
+    depth: h.level,
+  }));
+  const toc = createTOC(tocItems, t("BLOG.ON_THIS_PAGE"));
+
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(dayjs(post.date).toDate());
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl min-w-0 gap-4 px-6 pb-16">
+      <TOCLayout toc={toc}>
+        <article className="mx-auto w-full max-w-3xl min-w-0">
+          <nav className="pt-15">
+            <Link
+              href="/blog"
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
+            >
+              <Icon name="arrow-left" className="h-4 w-4" />
+              {t("BLOG.BACK_TO_BLOG")}
+            </Link>
+          </nav>
+
+          <section className="relative overflow-hidden">
+            {post.heroImage ? (
+              <div className="relative mx-auto mt-8 aspect-21/9 w-full overflow-hidden rounded-2xl">
+                <Image
+                  src={post.heroImage}
+                  alt={tr.title}
+                  fill
+                  sizes="(min-width: 1024px) 1024px, 100vw"
+                  className="object-cover"
+                  priority
+                />
+                <div className="from-background via-background/60 to-background/10 absolute inset-0 bg-linear-to-t" />
+              </div>
+            ) : (
+              <TypographicSmokeLazy />
+            )}
+
+            <div className="relative flex flex-col items-center pt-6 pb-10 text-center">
+              <div
+                className={cn(
+                  "mb-6 inline-flex items-center gap-2 rounded-sm border px-3 py-1.5",
+                  theme.tagBorder,
+                  theme.tagBg,
+                )}
+              >
+                <span className="relative flex size-1.5">
+                  <span className="bg-primary absolute inline-flex size-full animate-ping rounded-full opacity-75" />
+                  <span className="bg-primary relative inline-flex size-1.5 rounded-full" />
+                </span>
+                <span
+                  className={cn(
+                    "font-mono text-[10px] tracking-[0.2em] uppercase",
+                    theme.text,
+                  )}
+                >
+                  {t("BLOG.PUBLISHED_BADGE")}
+                </span>
+              </div>
+
+              <div
+                className={cn(
+                  "mb-4 font-mono text-xs tracking-widest uppercase",
+                  theme.text,
+                )}
+              >
+                {categoryLabel}
+              </div>
+
+              <h1 className="text-foreground mb-5 text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+                {tr.title}
+              </h1>
+              <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+                {tr.description}
+              </p>
+
+              <div className="text-muted-foreground mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-mono text-xs tracking-wider uppercase">
+                <time dateTime={post.date}>{formattedDate}</time>
+                <span>·</span>
+                <span>{t("BLOG.READ_TIME", { minutes })}</span>
+                <span>·</span>
+                <span>{t("BLOG.BY_AUTHOR", { author: tr.author })}</span>
+              </div>
+
+              {post.tags.length > 0 && (
+                <div className="mt-5 flex flex-wrap justify-center gap-1.5">
+                  {post.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className="font-mono text-[10px]"
+                    >
+                      {t(`BLOG.TAG.${tag}` as Parameters<typeof t>[0])}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="prose prose-neutral dark:prose-invert border-border mt-4 max-w-none min-w-0 border-t pt-12 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_li]:my-1 [&_p]:my-4 [&_p]:leading-relaxed [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6">
+            {tldrKey && (
+              <p className="border-primary/40 bg-muted/40 rounded-r-md border-l-2 px-4 py-3 text-[15px]">
+                {t(`${tldrKey}.TLDR`, APP_VALUES)}
+              </p>
+            )}
+            <post.Component />
+            {methodKey && (
+              <p className="text-muted-foreground border-border mt-10 border-t pt-6 text-sm">
+                {t(`${methodKey}.METHOD`, APP_VALUES)}
+              </p>
+            )}
+            {faqKey && (
+              <section id="faq">
+                <h2>{t("BLOG.FAQ_TITLE")}</h2>
+                {([1, 2, 3] as const).map((n) => (
+                  <div key={n}>
+                    <h3 className="mt-6 mb-2 text-lg font-semibold">
+                      {t(`${faqKey}.FAQ_${n}_Q`, APP_VALUES)}
+                    </h3>
+                    <p>{t(`${faqKey}.FAQ_${n}_A`, APP_VALUES)}</p>
+                  </div>
+                ))}
+              </section>
+            )}
+          </div>
+
+          <PrevNextNav prev={adjacent.prev} next={adjacent.next} />
+
+          <RelatedPosts posts={related} locale={locale} />
+        </article>
+      </TOCLayout>
+    </div>
+  );
+}

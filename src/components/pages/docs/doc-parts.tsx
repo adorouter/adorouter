@@ -1,0 +1,139 @@
+import { CodeBlock } from "@/components/elements/code/code-block";
+import { HeadingAnchor } from "@/components/pages/docs/heading-anchor";
+import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/navigation";
+import Image from "next/image";
+
+export function DocSection(props: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-12">
+      <h2 className="mb-4 scroll-mt-24 text-2xl font-semibold" id={props.id}>
+        <HeadingAnchor id={props.id} title={props.title} />
+      </h2>
+      <div className="text-muted-foreground space-y-4 text-sm">
+        {props.children}
+      </div>
+    </section>
+  );
+}
+
+export function DocTable(props: {
+  headers: string[];
+  rows: React.ReactNode[][];
+}) {
+  return (
+    <div className="border-border overflow-x-auto rounded-lg border">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-muted/50">
+          <tr>
+            {props.headers.map((header) => (
+              <th
+                key={header}
+                className="text-foreground px-4 py-2 font-medium"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {props.rows.map((row, idx) => (
+            <tr key={idx} className="border-border border-t">
+              {row.map((cell, cellIdx) => (
+                <td key={cellIdx} className="px-4 py-2 align-top">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function DocPageLink(props: {
+  slug: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={{ pathname: "/docs/platform/[slug]", params: { slug: props.slug } }}
+      className="text-primary hover:underline"
+    >
+      {props.children}
+    </Link>
+  );
+}
+
+export function DocAppLink(props: {
+  href: React.ComponentProps<typeof Link>["href"];
+  children: React.ReactNode;
+}) {
+  return (
+    <Link href={props.href} className="text-primary hover:underline">
+      {props.children}
+    </Link>
+  );
+}
+
+export function DocImage(props: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  // Screenshots of small UI (a menu, a single control) blur when stretched to
+  // the default column width, so they cap at their own pixel size instead.
+  natural?: boolean;
+  // Set on the first image of a page: it is the LCP element, and lazy loading
+  // it costs the paint.
+  priority?: boolean;
+  // The optimizer picks a candidate from the viewport width unless told the
+  // real rendered size, which upscales a small screenshot into its own box.
+  sizes?: string;
+}) {
+  return (
+    <Image
+      src={props.src}
+      alt={props.alt}
+      width={props.width}
+      height={props.height}
+      priority={props.priority}
+      sizes={props.sizes}
+      className={cn(
+        "border-border w-full rounded-lg border",
+        !props.natural && "max-w-xl",
+      )}
+      style={props.natural ? { maxWidth: props.width } : undefined}
+    />
+  );
+}
+
+export function DocCode(props: { code: string; lang?: string }) {
+  return <CodeBlock code={props.code} language={props.lang ?? "text"} />;
+}
+
+export function DocKbd(props: { children: React.ReactNode }) {
+  return (
+    <code className="bg-muted text-foreground rounded px-1.5 py-0.5 font-mono text-xs">
+      {props.children}
+    </code>
+  );
+}
+
+export function DocWarning(props: { children: React.ReactNode }) {
+  return (
+    <div
+      role="note"
+      className="flex gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300"
+    >
+      <Icon name="triangle-alert" className="mt-0.5 size-4 shrink-0" />
+      <div className="[&>p]:m-0">{props.children}</div>
+    </div>
+  );
+}

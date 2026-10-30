@@ -1,0 +1,217 @@
+"use client";
+
+import { CopyButton } from "@/components/elements/code/copy-button";
+import { Highlight } from "@/components/elements/code/highlight";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/ui/use-mobile";
+import {
+  buildRequestLogCurl,
+  readLocalRequestLog,
+} from "@/lib/db/client/data/chat/request-log";
+import { queryKeys } from "@/lib/react-query/keys";
+import { formatJson, rec } from "@/lib/utils/base";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+
+export function RequestLogSheet(props: {
+  msgId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const t = useTranslations();
+  const isMobile = useIsMobile();
+
+  const log = useQuery({
+    queryKey: queryKeys.requestLog(props.msgId),
+    queryFn: () => readLocalRequestLog(props.msgId),
+    enabled: props.open,
+  });
+
+  const row = log.data;
+
+  // Retention EMPTIES the heavy columns rather than deleting the row, so an old
+  // log opens with every payload as `[]` and no other signal that it was trimmed.
+  const trimmed =
+    !!row &&
+    (row.finalMessages == null ||
+      (Array.isArray(row.finalMessages) && row.finalMessages.length === 0));
+
+  const sent = rec(row?.sent);
+  const sentReasoning = rec(sent?.providerOptions)?.reasoningEffort;
+
+  const upstreamBody = row
+    ? {
+        model: rec(row.requestBody)?.model,
+        ...(row.assembledSystem ? { system: row.assembledSystem } : {}),
+        messages: row.finalMessages,
+      }
+    : null;
+
+  return (
+    <Sheet open={props.open} onOpenChange={props.onOpenChange}>
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className="w-[min(90vw,56rem)]! max-w-4xl! overflow-hidden max-md:h-[90dvh]! max-md:w-full!"
+      >
+        <SheetHeader>
+          <SheetTitle>{t("CHAT.REQUEST_LOG.TITLE")}</SheetTitle>
+          <SheetDescription>{props.msgId}</SheetDescription>
+          {row && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {row.requestId && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_REQ")}: {row.requestId}
+                </Badge>
+              )}
+              {row.channelName && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_PROVIDER")}: {row.channelName}
+                </Badge>
+              )}
+              {row.inputTokens != null && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_IN")}: {row.inputTokens}
+                </Badge>
+              )}
+              {row.cachedInputTokens != null && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_CACHED")}: {row.cachedInputTokens}
+                </Badge>
+              )}
+              {row.outputTokens != null && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_OUT")}: {row.outputTokens}
+                </Badge>
+              )}
+              {row.cost != null && (
+                <Badge variant="outline">${row.cost.toFixed(6)}</Badge>
+              )}
+              {row.durationMs != null && (
+                <Badge variant="outline">
+                  {row.durationMs}
+                  {t("CHAT.REQUEST_LOG.UNIT_MS")}
+                </Badge>
+              )}
+              {row.tokensPerSecond != null && (
+                <Badge variant="outline">
+                  {row.tokensPerSecond.toFixed(1)}{" "}
+                  {t("CHAT.REQUEST_LOG.UNIT_TOK_PER_S")}
+                </Badge>
+              )}
+              {typeof sentReasoning === "string" && (
+                <Badge variant="outline">
+                  {t("CHAT.REQUEST_LOG.BADGE_REASONING")}: {sentReasoning}
+                </Badge>
+              )}
+              {row.droppedParams && (
+                <Badge variant="destructive">
+                  {t("CHAT.REQUEST_LOG.BADGE_DROPPED")}: {row.droppedParams}
+                </Badge>
+              )}
+            </div>
+          )}
+          {row && (
+            <div className="mt-2 flex gap-2">
+              <CopyButton
+                text={buildRequestLogCurl(row)}
+                label={t("CHAT.REQUEST_LOG.COPY_CURL")}
+              />
+              <CopyButton
+                text={formatJson(row)}
+                label={t("CHAT.REQUEST_LOG.COPY_JSON")}
+              />
+            </div>
+          )}
+        </SheetHeader>
+
+        {!row ? (
+          <div className="text-muted-foreground p-4 text-sm">
+            {t("CHAT.REQUEST_LOG.NO_LOG")}
+          </div>
+        ) : (
+          <Tabs
+            defaultValue="upstream"
+            className="flex min-h-0 flex-1 flex-col px-4 pb-4"
+          >
+            <TabsList className="w-full scrollbar-none justify-start overflow-x-auto overflow-y-hidden">
+              <TabsTrigger value="upstream">
+                {t("CHAT.REQUEST_LOG.TAB_UPSTREAM")}
+              </TabsTrigger>
+              <TabsTrigger value="system">
+                {t("CHAT.REQUEST_LOG.TAB_SYSTEM")}
+              </TabsTrigger>
+              <TabsTrigger value="final">
+                {t("CHAT.REQUEST_LOG.TAB_FINAL")}
+              </TabsTrigger>
+              <TabsTrigger value="headers">
+                {t("CHAT.REQUEST_LOG.TAB_HEADERS")}
+              </TabsTrigger>
+              <TabsTrigger value="request">
+                {t("CHAT.REQUEST_LOG.TAB_REQUEST")}
+              </TabsTrigger>
+              <TabsTrigger value="sent">
+                {t("CHAT.REQUEST_LOG.TAB_SENT")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="upstream" className="min-h-0 overflow-auto">
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("CHAT.REQUEST_LOG.TAB_UPSTREAM_HINT")}
+              </p>
+              {trimmed && (
+                <p className="text-muted-foreground mb-2 text-xs italic">
+                  {t("CHAT.REQUEST_LOG.TRIMMED")}
+                </p>
+              )}
+              <Highlight code={formatJson(upstreamBody)} />
+            </TabsContent>
+            <TabsContent value="system" className="min-h-0 overflow-auto">
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("CHAT.REQUEST_LOG.TAB_SYSTEM_HINT")}
+              </p>
+              {trimmed && (
+                <p className="text-muted-foreground mb-2 text-xs italic">
+                  {t("CHAT.REQUEST_LOG.TRIMMED")}
+                </p>
+              )}
+              <Highlight code={row.assembledSystem ?? ""} language="markdown" />
+            </TabsContent>
+            <TabsContent value="final" className="min-h-0 overflow-auto">
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("CHAT.REQUEST_LOG.TAB_FINAL_HINT")}
+              </p>
+              {trimmed && (
+                <p className="text-muted-foreground mb-2 text-xs italic">
+                  {t("CHAT.REQUEST_LOG.TRIMMED")}
+                </p>
+              )}
+              <Highlight code={formatJson(row.finalMessages)} />
+            </TabsContent>
+            <TabsContent value="headers" className="min-h-0 overflow-auto">
+              <Highlight code={formatJson(row.responseHeaders)} />
+            </TabsContent>
+            <TabsContent value="request" className="min-h-0 overflow-auto">
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("CHAT.REQUEST_LOG.TAB_REQUEST_HINT")}
+              </p>
+              <Highlight code={formatJson(row.requestBody)} />
+            </TabsContent>
+            <TabsContent value="sent" className="min-h-0 overflow-auto">
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("CHAT.REQUEST_LOG.TAB_SENT_HINT")}
+              </p>
+              <Highlight code={formatJson(row.sent)} />
+            </TabsContent>
+          </Tabs>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}

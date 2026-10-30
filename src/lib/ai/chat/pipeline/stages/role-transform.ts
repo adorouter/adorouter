@@ -1,0 +1,255 @@
+import { risuUnescape } from "@/lib/ai/chat/macros";
+import { logChatDebug } from "@/lib/utils/chat-debug-log";
+import { runLuaEditTrigger } from "@/lib/ai/chat/triggers/lua/engine";
+import { makeTriggerContext } from "@/lib/ai/chat/triggers/vm";
+import type { AssembledSystem } from "../../prompt/assembler.service";
+import { resolveChatRange } from "../../prompt/template";
+import { getModelRoleFlags } from "../role-flags";
+import {
+  appendPrefill,
+  appendUserStub,
+  demoteLateSystem,
+  dropEmptyMessages,
+  dropFailedAssistantTurns,
+  mergeAlternateRoles,
+  mkMsg,
+  prependUserStub,
+  stripReasoningParts,
+  stripSystemRole,
+  unescapeMessages,
+  type StreamMessages,
+} from "../transforms";
+
+export type RoleTransformed = {
+  messagesForUpstream: StreamMessages;
+  effectiveSystem: string | undefined;
+  deepSeekReasoningContent: string | undefined;
+  autoFlags: ReturnType<typeof getModelRoleFlags>;
+};
+
+export async function transformRoles(
+  model: string,
+  assembled: AssembledSystem,
+  historyMessages: StreamMessages,
+  luaCodes: string[],
+): Promise<RoleTransformed> {
+  const autoFlags = getModelRoleFlags(model);
+  const keepSystem = assembled.flags.keepSystemRoles;
+  const noSystemRole =
+    assembled.flags.noSystemRole || (!autoFlags.fullSystem && !keepSystem);
+  const forceAlternateRoles =
+    assembled.flags.forceAlternateRoles || autoFlags.alternateRoles;
+  const mustStartWithUserInput =
+    assembled.flags.mustStartWithUserInput || autoFlags.userStub;
+  // A prefill only holds the trailing assistant slot on providers that accept one.
+  // Gemini does not, so its prefill stays in the transcript and the stub still closes.
+  const mustEndWithUserInput =
+    autoFlags.endUserStub && !(assembled.prefill && autoFlags.prefillSupported);
+
+  let processedMessages = walkTemplate(
+    assembled,
+    historyMessages,
+    noSystemRole,
+  );
+
+  const effectiveSystem =
+    noSystemRole || assembled.system == null
+      ? undefined
+      : risuUnescape(assembled.system);
+
+  const deepSeekReasoningContent = autoFlags.deepSeekThinkingInput
+    ? collectTrailingReasoning(processedMessages)
+    : undefined;
+
+  const prefillText = openThinkForPrefill(
+    assembled.prefill,
+    autoFlags.prefillOpensThink,
+  );
+
+  processedMessages = dropFailedAssistantTurns(processedMessages);
+  processedMessages = stripReasoningParts(processedMessages);
+  if (noSystemRole) processedMessages = stripSystemRole(processedMessages);
+  if (!keepSystem) processedMessages = demoteLateSystem(processedMessages);
+  processedMessages = dropEmptyMessages(processedMessages);
+  if (prefillText && !prefillEmitted(assembled)) {
+    processedMessages = appendPrefill(processedMessages, prefillText);
+  } else if (prefillText && prefillText !== assembled.prefill) {
+    processedMessages = retagEmittedPrefill(
+      processedMessages,
+      assembled.prefill!,
+      prefillText,
+    );
+  }
+  if (forceAlternateRoles)
+    processedMessages = mergeAlternateRoles(processedMessages);
+  if (mustStartWithUserInput)
+    processedMessages = prependUserStub(processedMessages);
+  if (mustEndWithUserInput)
+    processedMessages = appendUserStub(processedMessages);
+
+  if (luaCodes.length > 0) {
+    processedMessages = await applyRequestEdit(processedMessages, (ctx, f) =>
+      runLuaEditTrigger(luaCodes, "editrequest", ctx, f),
+    );
+  }
+  if (typeof window !== "undefined") {
+    const { hasJsHandlers, runJsEditTrigger } =
+      await import("@/lib/ai/chat/plugins/engine");
+    if (hasJsHandlers("request")) {
+      processedMessages = await applyRequestEdit(processedMessages, (ctx, f) =>
+        runJsEditTrigger("request", ctx, f),
+      );
+    }
+  }
+
+  logChatDebug("assembly.shape", {
+    model,
+    flags: {
+      noSystemRole,
+      forceAlternateRoles,
+      mustStartWithUserInput,
+      mustEndWithUserInput,
+    },
+    cards: assembled.promptParts
+      .map((p) => (p.kind === "message" ? p.role[0] : "H"))
+      .join(""),
+    historyIn: historyMessages.length,
+    systemHoisted: effectiveSystem != null,
+    prefill: !!assembled.prefill,
+    rolesOut: processedMessages.map((m) => m.role).join(","),
+  });
+
+  return {
+    messagesForUpstream: unescapeMessages(processedMessages),
+    effectiveSystem,
+    deepSeekReasoningContent,
+    autoFlags,
+  };
+}
+
+function walkTemplate(
+  assembled: AssembledSystem,
+  historyMessages: StreamMessages,
+  noSystemRole: boolean,
+): StreamMessages {
+  const parts = assembled.promptParts;
+  let lead = 0;
+  if (!noSystemRole) {
+    for (; lead < parts.length; lead++) {
+      const p = parts[lead];
+      if (p.kind !== "message" || p.role !== "system") break;
+    }
+  }
+  const out: StreamMessages = [];
+  let hadChat = false;
+  for (let i = lead; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.kind === "message") {
+      out.push(mkMsg(p.role, p.text));
+      continue;
+    }
+    hadChat = true;
+    const range = resolveChatRange(
+      p.rangeStart,
+      p.rangeEnd,
+      historyMessages.length,
+    );
+    out.push(...historyMessages.slice(range.start, range.end));
+  }
+  if (!hadChat) out.push(...historyMessages);
+  return out;
+}
+
+function collectTrailingReasoning(
+  messages: StreamMessages,
+): string | undefined {
+  const last = messages[messages.length - 1];
+  if (last?.role !== "assistant" || !Array.isArray(last.parts))
+    return undefined;
+  const thoughts = last.parts
+    .filter((p) => p.type === "reasoning")
+    .map((p) => p.text)
+    .filter((t) => typeof t === "string" && t.length > 0);
+  return thoughts.length > 0 ? thoughts.join("\n") : undefined;
+}
+
+// Tag the prefill STRING, not the appended message: merge folds a doubled trailing assistant.
+function openThinkForPrefill(
+  prefill: string | undefined,
+  enabled: boolean,
+): string | undefined {
+  if (!prefill || !enabled) return prefill;
+  const open = prefill.lastIndexOf("<think>");
+  if (open !== -1 && !prefill.includes("</think>", open)) return prefill;
+  return `<think>\n${prefill}`;
+}
+
+// A prefill emitted as a template card skips appendPrefill, so retag it in place.
+function retagEmittedPrefill(
+  messages: StreamMessages,
+  rawPrefill: string,
+  tagged: string,
+): StreamMessages {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "assistant" || !Array.isArray(m.parts)) continue;
+    const idx = m.parts.findIndex(
+      (p) => p.type === "text" && p.text === rawPrefill,
+    );
+    if (idx === -1) continue;
+    const parts = m.parts.map((p, j) =>
+      j === idx ? { ...p, text: tagged } : p,
+    );
+    return messages.map((msg, j) => (j === i ? { ...msg, parts } : msg));
+  }
+  return messages;
+}
+
+function prefillEmitted(assembled: AssembledSystem): boolean {
+  return assembled.promptParts.some(
+    (p) =>
+      p.kind === "message" &&
+      p.role === "assistant" &&
+      p.text === assembled.prefill,
+  );
+}
+
+type FormatedMessage = { role: string; content: string };
+
+async function applyRequestEdit(
+  messages: StreamMessages,
+  run: (
+    ctx: ReturnType<typeof makeTriggerContext>,
+    formated: FormatedMessage[],
+  ) => Promise<FormatedMessage[]>,
+): Promise<StreamMessages> {
+  const formated: FormatedMessage[] = messages.map((m) => ({
+    role: m.role,
+    content: Array.isArray(m.parts)
+      ? m.parts
+          .filter((p) => p.type === "text")
+          .map((p) => p.text)
+          .join("\n")
+      : "",
+  }));
+  // The v2*RequestState opcodes read and MUTATE ctx.formated in place, so the
+  // context has to carry the same array the result is compared against.
+  const before = formated.map((f) => f.content);
+  const editCtx = makeTriggerContext({
+    mode: "request",
+    vars: {},
+    globalVars: {},
+    chat: [],
+    formated,
+  });
+  const edited = await run(editCtx, formated);
+  if (!Array.isArray(edited) || edited.length !== formated.length)
+    return messages;
+  return messages.map((m, i) =>
+    edited[i] &&
+    typeof edited[i].content === "string" &&
+    edited[i].content !== before[i]
+      ? { ...m, parts: [{ type: "text" as const, text: edited[i].content }] }
+      : m,
+  );
+}

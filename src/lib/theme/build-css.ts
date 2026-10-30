@@ -1,0 +1,465 @@
+import { FONT_OPTIONS } from "@/lib/theme/fonts";
+import {
+  accentVars,
+  chartShades,
+  generatePalette,
+  normHex,
+} from "@/lib/theme/palette";
+import {
+  CUSTOM,
+  SHADOWS,
+  findAccent,
+  findPalette,
+  findStyle,
+  type StylePreset,
+} from "@/lib/theme/presets";
+import {
+  modeValues,
+  presetsOf,
+  type ModeValues,
+  type ThemeImages,
+  type TokenValues,
+  type UserTheme,
+} from "@/lib/theme/theme-types";
+import {
+  THEME_SCOPES,
+  TOKEN_BY_ID,
+  TOKENS,
+  type ThemeMode,
+  type ThemeScope,
+  type TokenDef,
+} from "@/lib/theme/tokens";
+
+// A theme arrives from pasted JSON with no validation and is compiled into a
+// server-rendered <style>, so the stored name must never reach the CSS as
+// typed. Anchored allowlist, and the emitted string is rebuilt from the match.
+const FAMILY_RE = /^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/;
+const FAMILY_MAX = 50;
+
+export function normFontFamily(v: string | undefined): string | null {
+  const name = (v ?? "").trim().replace(/[+_]/g, " ").replace(/\s+/g, " ");
+  if (!name || name.length > FAMILY_MAX || !FAMILY_RE.test(name)) return null;
+  return name;
+}
+
+export function customFontName(
+  value: string | number | undefined,
+): string | null {
+  const s = String(value ?? "");
+  if (!s.startsWith(`${CUSTOM}:`)) return null;
+  return normFontFamily(s.slice(CUSTOM.length + 1));
+}
+
+// We build the URL, so only fonts.googleapis.com is ever reachable. The weight
+// list is the point: a family loaded at 400 alone leaves every bold synthetic.
+export function googleFontHref(theme: UserTheme): string | null {
+  const names: string[] = [];
+  for (const scope of THEME_SCOPES) {
+    const all = modeValues(theme, scope).all ?? {};
+    for (const id of ["font-sans", "font-display", "font-mono"]) {
+      const name = customFontName(all[id]);
+      if (name && !names.includes(name)) names.push(name);
+    }
+  }
+  if (names.length === 0) return null;
+  const query = names
+    .map(
+      (n) =>
+        `family=${encodeURIComponent(n)}:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700`,
+    )
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${query}&display=swap`;
+}
+
+function fontFamilyFor(
+  value: string | number | undefined,
+  kind: "sans" | "mono" | "display",
+): string | null {
+  if (value === undefined) return null;
+  const fallback =
+    kind === "mono" ? "ui-monospace, monospace" : "ui-sans-serif, system-ui";
+  const custom = customFontName(value);
+  if (custom) return `"${custom}", ${fallback}`;
+  const opt = FONT_OPTIONS.find(
+    (f) => f.id === value && f.kinds.includes(kind),
+  );
+  return opt ? `var(${opt.varName}), ${fallback}` : null;
+}
+
+// Values come from pasted theme JSON and the cookie and land in a server-rendered
+// <style>: a colour of `red}</style><script>` ran script on every page. Keys must
+// be token names; values may not leave the declaration or pull a resource.
+const SAFE_KEY_RE = /^[a-z0-9-]+$/;
+const UNSAFE_VALUE_RE = /[<>{};\\@]|url\(|expression\(/i;
+
+function emitBlock(selector: string, vars: TokenValues): string {
+  const entries = Object.entries(vars)
+    .filter(([, v]) => v !== "" && v !== undefined)
+    .filter(([k, v]) => SAFE_KEY_RE.test(k) && !UNSAFE_VALUE_RE.test(String(v)))
+    .map(([k, v]) => `--${k}: ${v};`)
+    .join("");
+  return entries ? `${selector}{${entries}}` : "";
+}
+
+function styleVars(style: StylePreset): TokenValues {
+  return {
+    radius: style.radius,
+    spacing: style.spacing,
+    shadow: style.shadow,
+    tracking: style.tracking,
+  };
+}
+
+function hexOf(values: TokenValues | undefined, id: string): string | null {
+  return normHex(values?.[id]);
+}
+
+// Presets and custom inputs share one path: a base colour becomes the surface
+// set, an accent becomes the control set, a chart colour becomes the shades.
+function generatorVars(
+  presets: UserTheme["presets"],
+  explicit: TokenValues,
+  mode: ThemeMode,
+): TokenValues {
+  const light = mode === "light";
+  const out: TokenValues = {};
+  const palette = findPalette(presets.palette);
+  const paletteBase = hexOf(explicit, "palette-base") ?? palette?.base[mode];
+  if (paletteBase) Object.assign(out, generatePalette(paletteBase));
+
+  const accent = findAccent(presets.accent);
+  const accentHex =
+    hexOf(explicit, "accent-base") ??
+    accent?.hex[mode] ??
+    palette?.accent?.[mode];
+  if (accentHex) Object.assign(out, accentVars(accentHex));
+
+  const chart = findAccent(presets.chart);
+  const chartHex =
+    hexOf(explicit, "chart-base") ?? chart?.hex[mode] ?? accentHex;
+  if (chartHex) Object.assign(out, chartShades(chartHex, light));
+  return out;
+}
+
+function tokenCss(def: TokenDef, value: string | number): string {
+  if (
+    def.kind === "number" &&
+    def.unit &&
+    def.unit !== "x" &&
+    def.unit !== "%"
+  ) {
+    return `${value}${def.unit}`;
+  }
+  return String(value);
+}
+
+// The variables one scope declares for one mode. Scopes other than app carry
+// only their own overrides: inheritance is the cascade's job.
+export function resolveVars(
+  theme: UserTheme,
+  scope: ThemeScope,
+  mode: ThemeMode,
+): TokenValues {
+  const values = modeValues(theme, scope);
+  const explicit: TokenValues = {
+    ...(values.all ?? {}),
+    ...(values[mode] ?? {}),
+  };
+  const out: TokenValues = {};
+  const presets = presetsOf(theme, scope);
+  const style = findStyle(presets.style);
+  if (style) Object.assign(out, styleVars(style));
+  Object.assign(out, generatorVars(presets, explicit, mode));
+  Object.assign(out, explicit);
+
+  const vars: TokenValues = {};
+  for (const [id, raw] of Object.entries(out)) {
+    const def = TOKEN_BY_ID.get(id);
+    if (!def) continue;
+    if (def.id === "shadow") {
+      const shadow = SHADOWS[String(raw) as keyof typeof SHADOWS];
+      if (shadow) {
+        for (const size of ["xs", "sm", "md", "lg"])
+          vars[`theme-shadow-${size}`] = shadow;
+      }
+      continue;
+    }
+    if (def.kind === "font") {
+      const kind =
+        def.id === "font-mono"
+          ? "mono"
+          : def.id === "font-display"
+            ? "display"
+            : "sans";
+      const family = fontFamilyFor(raw, kind);
+      if (family) vars[def.cssVar!.slice(2)] = family;
+      continue;
+    }
+    if (!def.cssVar || def.group === "generator" || def.group === "wallpaper")
+      continue;
+    vars[def.cssVar.slice(2)] = tokenCss(def, raw);
+  }
+  // The sidebar token is a colour in two groups: the shadcn family and the
+  // region list. Nothing to reconcile, both write --sidebar.
+  // A body font with no heading font of its own is the heading font too.
+  if (vars["font-sans"] && !vars["font-display"])
+    vars["font-display"] = vars["font-sans"];
+  return vars;
+}
+
+const CHAT_SCOPE_ATTR = "data-theme-scope";
+
+function scopeSelector(scope: ThemeScope): string {
+  return scope === "app" ? ":root" : `[${CHAT_SCOPE_ATTR}="${scope}"]`;
+}
+
+function modeSelector(scope: ThemeScope, mode: ThemeMode): string {
+  if (scope === "app") return mode === "light" ? ":root" : ".dark";
+  const base = scopeSelector(scope);
+  return mode === "light" ? base : `.dark ${base}`;
+}
+
+const FONT_IDS = ["font-sans", "font-display", "font-mono"];
+
+export function buildThemeCss(theme: UserTheme): string {
+  const blocks: string[] = [];
+  for (const scope of THEME_SCOPES) {
+    if (scope !== "app" && !theme.scopes[scope]) continue;
+    for (const mode of ["light", "dark"] as const) {
+      const vars = resolveVars(theme, scope, mode);
+      // Mode-less tokens already sit in the light block, which .dark inherits.
+      if (mode === "dark") {
+        for (const key of Object.keys(vars)) {
+          if (!TOKEN_BY_ID.get(key)?.perMode) delete vars[key];
+        }
+      }
+      const fonts: TokenValues = {};
+      for (const id of FONT_IDS) {
+        if (vars[id] === undefined) continue;
+        fonts[id] = vars[id];
+        delete vars[id];
+      }
+      blocks.push(emitBlock(modeSelector(scope, mode), vars));
+      // next/font sets --font-* on <body> through its variable class, so the
+      // app value must land on body itself; a scope root is already inside it.
+      if (mode === "light") {
+        const target = scope === "app" ? "body" : scopeSelector(scope);
+        const important = scope === "app" ? " !important" : "";
+        blocks.push(
+          emitBlock(
+            target,
+            Object.fromEntries(
+              Object.entries(fonts).map(([k, v]) => [k, `${v}${important}`]),
+            ),
+          ),
+        );
+      }
+    }
+  }
+  for (const scope of THEME_SCOPES) {
+    if (scope !== "app" && !theme.scopes[scope]) continue;
+    const values = modeValues(theme, scope);
+    for (const def of TOKENS) {
+      if (!def.rule) continue;
+      if (def.perMode) {
+        const set =
+          values.light?.[def.id] !== undefined ||
+          values.dark?.[def.id] !== undefined;
+        if (set && def.cssVar)
+          blocks.push(def.rule(`var(${def.cssVar})`, scopeSelector(scope)));
+        continue;
+      }
+      const raw = values.all?.[def.id];
+      if (raw === undefined || UNSAFE_VALUE_RE.test(String(raw))) continue;
+      blocks.push(def.rule(tokenCss(def, raw), scopeSelector(scope)));
+    }
+  }
+  // Menus and popups stay readable whatever alpha their colour carries; a
+  // migrated wallpaper theme can bring popover in fully clear.
+  blocks.push(
+    ".bg-popover{background-color:rgb(from var(--popover) r g b / max(alpha, 0.85)) !important;}",
+  );
+  return blocks.filter(Boolean).join("\n");
+}
+
+type Wallpaper = {
+  fit: string;
+  opacity: number;
+  blur: number;
+  panelOpacity: number;
+  panelBlur: number;
+};
+
+function num(v: string | number | undefined, fallback: number): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function wallpaperFor(theme: UserTheme, scope: ThemeScope): Wallpaper {
+  const values: TokenValues = {
+    ...(theme.global.all ?? {}),
+    ...(scope === "app" ? {} : (theme.scopes[scope]?.all ?? {})),
+  };
+  const panelOpacity = Math.min(
+    1,
+    Math.max(0, num(values["panel-opacity"], 0.75)),
+  );
+  return {
+    fit: String(values["wallpaper-fit"] ?? "cover"),
+    opacity: num(values["wallpaper-opacity"], 1),
+    blur: num(values["wallpaper-blur"], 0),
+    panelOpacity,
+    // 8 keeps the look every existing theme was built against.
+    panelBlur: Math.min(24, Math.max(0, num(values["panel-blur"], 8))),
+  };
+}
+
+// A scope needs its own block when it changes a wallpaper slider or colours
+// a surface the wallpaper would otherwise tint.
+function wallpaperOverridden(theme: UserTheme, scope: ThemeScope): boolean {
+  if (scope === "app") return false;
+  const values = theme.scopes[scope];
+  const all = values?.all ?? {};
+  return (
+    TOKENS.some((t) => t.group === "wallpaper" && all[t.id] !== undefined) ||
+    TINTED.some((id) => setIn(values, id))
+  );
+}
+
+function imageRules(scope: ThemeScope, image: string, w: Wallpaper): string {
+  const sizeRule =
+    w.fit === "tile"
+      ? "background-repeat:repeat;background-size:auto;"
+      : `background-repeat:no-repeat;background-size:${w.fit};`;
+  const safeUrl = image.replace(/["\\]/g, "");
+  // The image is painted once, on body, so a scope restyles that same layer
+  // while one of its pages is mounted rather than stacking a second copy.
+  const host = scope === "app" ? "body" : `body:has(${scopeSelector(scope)})`;
+  return [
+    `${host}::before{`,
+    'content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;',
+    `background-image:url("${safeUrl}");background-position:center;`,
+    sizeRule,
+    `opacity:${w.opacity};`,
+    `filter:${w.blur > 0 ? `blur(${w.blur}px)` : "none"};`,
+    "}",
+  ].join("");
+}
+
+const TINTED = [
+  "background",
+  "header",
+  "sidebar",
+  "card",
+  "overlay",
+  "footer",
+  "muted",
+  "bubble-user",
+  "bubble-assistant",
+  "composer",
+];
+
+function setIn(layer: ModeValues | undefined, id: string): boolean {
+  return layer?.light?.[id] !== undefined || layer?.dark?.[id] !== undefined;
+}
+
+function panelRules(theme: UserTheme, scope: ThemeScope, w: Wallpaper): string {
+  const at =
+    scope === "app"
+      ? "[data-bg-active]"
+      : `[data-bg-active] ${scopeSelector(scope)}`;
+  const pct = Math.round(w.panelOpacity * 100);
+  // An explicit none at 0: several panels ship with their own backdrop
+  // blur class, which would otherwise return the moment the slider hits 0.
+  const frost = (scale = 1) =>
+    w.panelBlur > 0
+      ? `backdrop-filter:blur(${(w.panelBlur * scale).toFixed(1)}px);`
+      : "backdrop-filter:none;";
+  const mix = (varName: string, p: number) =>
+    `color-mix(in srgb, var(--${varName}) ${p}%, transparent)`;
+  // Switch and slider thumbs fill themselves with .bg-background, but a knob is
+  // not a surface.
+  const notKnob =
+    ':not([data-slot="switch-thumb"]):not([data-slot="slider-thumb"])';
+  // A chosen colour carries its own alpha and is final: the app layer skips
+  // the tint, a scope restores its own value over the app-level rule.
+  // Untouched surfaces take the generic panel tint.
+  const tint = (id: string, p = pct) => {
+    if (scope !== "app" && setIn(theme.scopes[scope], id))
+      return `background-color:var(--${id}) !important;`;
+    if (setIn(theme.global, id)) return "";
+    return `background-color:${mix(id, p)} !important;`;
+  };
+  const translucent =
+    w.panelOpacity < 1
+      ? [
+          `${at} .bg-background${notKnob}{${tint("background")}${frost()}}`,
+          `${at} .bg-header{${tint("header")}${frost()}}`,
+          `${at} .bg-sidebar{${tint("sidebar")}${frost()}}`,
+          `${at} .bg-card{${tint("card")}}`,
+          `${at} .bg-overlay{${tint("overlay")}${frost()}}`,
+          `${at} .bg-footer{${tint("footer")}}`,
+          `${at} .bg-muted{${tint("muted")}}`,
+          // A translucent surface nested in another one multiplies; inner
+          // surfaces defer to the outer one.
+          `${at} .bg-background .bg-background${notKnob}{background-color:transparent !important;backdrop-filter:none;}`,
+          `${at} .bg-sidebar .bg-sidebar{background-color:transparent !important;backdrop-filter:none;}`,
+          // The sidebar's 1px border sits outside its panel's painted area.
+          `${at} [data-slot="sidebar-container"]{${tint("sidebar").replace(" !important", "") || "background-color:var(--sidebar);"}${frost()}}`,
+          `${at} [data-slot="sidebar-container"] .bg-sidebar{background-color:transparent !important;backdrop-filter:none;}`,
+        ].join("")
+      : "";
+  // Tint only, no backdrop-filter: on iOS each blurred bubble is its own
+  // full-resolution GPU surface, and a long thread froze whole tabs.
+  const bubble =
+    w.panelOpacity < 1
+      ? [
+          `${at} .aui-user-message-content{${tint("bubble-user")}}`,
+          `${at} .aui-assistant-message-content{${tint("bubble-assistant")}}`,
+        ].join("")
+      : "";
+  // The reasoning box ships as the outline variant with no fill, so it needs
+  // one at every panel opacity.
+  const reasoning = `${at} .aui-reasoning-root{background-color:${mix("muted", pct)} !important;}`;
+  // The type area is frosted harder than a panel so it stays legible over
+  // any artwork. A user colour replaces the tint, never the frost; the
+  // region's own frost token then outranks this with !important.
+  const composerFrost =
+    w.panelBlur > 0
+      ? `backdrop-filter:blur(${(w.panelBlur * 2).toFixed(1)}px) saturate(1.4);`
+      : "backdrop-filter:none;";
+  const composer = [
+    // Doubled attribute selector on purpose: it must outrank the
+    // three-class nested-surface reset above.
+    `${at} [data-slot="composer-shell"][data-slot="composer-shell"]{${tint("composer")}${composerFrost}}`,
+    `${at} .aui-thread-viewport-footer{background-color:transparent !important;backdrop-filter:none;}`,
+  ].join("");
+  // The editor itself stays readable at any panel setting, or a panel
+  // opacity of 0 leaves the sliders floating over the chat.
+  const editorPanel = `${at} [data-theme-editor]{background-color:rgb(from var(--popover) r g b / 0.92) !important;backdrop-filter:blur(16px);}`;
+  return translucent + bubble + reasoning + composer + editorPanel;
+}
+
+export function buildBackgroundCss(
+  theme: UserTheme,
+  images: ThemeImages,
+): string {
+  const active = THEME_SCOPES.some((s) => images[s]);
+  if (!active) return "";
+  const blocks: string[] = [
+    // Both must be transparent: body::before paints at z-index -1, so any
+    // opaque color on html or body renders on top of the image and buries it.
+    "html{background-color:transparent !important;}",
+    "body{background-color:transparent !important;}",
+  ];
+  for (const scope of THEME_SCOPES) {
+    const image = images[scope];
+    const own = Boolean(image) || wallpaperOverridden(theme, scope);
+    if (scope === "app" ? !image : !own) continue;
+    const w = wallpaperFor(theme, scope);
+    const painted = image ?? images.app;
+    if (painted) blocks.push(imageRules(scope, painted, w));
+    blocks.push(panelRules(theme, scope, w));
+  }
+  return blocks.join("");
+}

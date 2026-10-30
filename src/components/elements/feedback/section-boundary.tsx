@@ -1,0 +1,91 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import {
+  attachCrashLoadout,
+  captureCaughtError,
+  logChatDebug,
+} from "@/lib/utils/chat-debug-log";
+import { useTranslations } from "next-intl";
+import {
+  Component,
+  type ErrorInfo,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
+
+type FallbackProps = { error: Error; reset: () => void };
+
+function SectionFallback(props: FallbackProps) {
+  const t = useTranslations();
+
+  return (
+    <div className="chat-shell-reveal border-destructive/20 bg-destructive/5 flex items-center gap-3 rounded-lg border p-4">
+      <Icon
+        name="triangle-alert"
+        className="text-destructive h-4 w-4 shrink-0"
+      />
+      <span className="text-muted-foreground text-sm">
+        {t("MAIN.ERROR.SECTION_LOAD_FAILED")}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={props.reset}
+        className="ml-auto shrink-0"
+      >
+        <Icon name="refresh-cw" className="mr-1.5 h-3 w-3" />
+        {t("MAIN.ACTIONS.TRY_AGAIN")}
+      </Button>
+    </div>
+  );
+}
+
+type State = { error: Error | null };
+
+export class SectionBoundary extends Component<
+  PropsWithChildren<{
+    fallback?: (props: FallbackProps) => ReactNode;
+    source?: string;
+    detail?: () => string | null;
+  }>,
+  State
+> {
+  state: State = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    const source = this.props.source ?? "section";
+    captureCaughtError({
+      source,
+      error,
+      componentStack: info.componentStack ?? null,
+      detail: this.props.detail?.() ?? null,
+    });
+    if (this.props.detail) {
+      void import("@/lib/utils/crash-loadout")
+        .then((m) => m.collectCrashLoadout())
+        .then(attachCrashLoadout)
+        .catch(() => {});
+    }
+    logChatDebug("section.error", {
+      source,
+      name: error.name,
+      message: String(error.message).slice(0, 300),
+    });
+  }
+
+  reset = () => this.setState({ error: null });
+
+  render() {
+    if (this.state.error) {
+      const Fallback = this.props.fallback ?? SectionFallback;
+      return <Fallback error={this.state.error} reset={this.reset} />;
+    }
+    return this.props.children;
+  }
+}

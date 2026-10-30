@@ -1,0 +1,69 @@
+"use client";
+
+import {
+  activeConvOverridesAtom,
+  chatDefaultsAtom,
+  chatGroupAtom,
+  chatLoadoutAtom,
+  chatModelAtom,
+  chatStore,
+  chatWebSearchAtom,
+  globalVarsAtom,
+  speakingCharacterIdAtom,
+} from "@/store/chat-store";
+
+// Media generation reads only model/group/convId plus the latest user turn, so
+// it skips the text path's assembly entirely: no chatContext (which lazy-loads
+// ~110KB of lorebook/trigger machinery and walks the conversation) and no
+// per-message timestamps. Those exist to build a PROMPT from history, which an
+// image/video request has no use for.
+export function buildMediaRequestBody(getConvId: () => string | null) {
+  return {
+    model: chatStore.get(chatModelAtom),
+    convId: getConvId(),
+    group: chatStore.get(chatGroupAtom),
+  };
+}
+
+export async function buildChatRequestBody(getConvId: () => string | null) {
+  const convId = getConvId();
+  const loadout = chatStore.get(chatLoadoutAtom);
+  const chatContext = convId
+    ? await import("@/lib/db/client/data/chat/chat-context").then((m) =>
+        m.buildChatContextFromLocalDb(convId, {
+          expectBindings:
+            loadout.characterIds.length > 0 || loadout.lorebookIds.length > 0,
+        }),
+      )
+    : undefined;
+  let messageTimes: Record<string, number> | undefined;
+  if (convId) {
+    const rows = await import("@/lib/db/client/data/chat/chat").then((m) =>
+      m.readLocalMessages(convId),
+    );
+    if (rows && rows.length > 0) {
+      messageTimes = {};
+      for (const r of rows) {
+        messageTimes[r.id] = new Date(r.createdAt).getTime();
+      }
+    }
+  }
+  return {
+    model: chatStore.get(chatModelAtom),
+    convId,
+    webSearch: chatStore.get(chatWebSearchAtom),
+    group: chatStore.get(chatGroupAtom),
+    overrides:
+      chatStore.get(activeConvOverridesAtom) ?? chatStore.get(chatDefaultsAtom),
+    chatContext,
+    globalVars: chatStore.get(globalVarsAtom),
+    speakingCharacterId: chatStore.get(speakingCharacterIdAtom),
+    messageTimes,
+    clientEnv: {
+      viewportW: window.innerWidth,
+      viewportH: window.innerHeight,
+      locale: Intl.DateTimeFormat().resolvedOptions().locale,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+  };
+}
