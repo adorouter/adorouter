@@ -12,6 +12,8 @@ const SECTIONS: LegalDocSection[] = [
     intro: { key: "PAYMENT_CONTENT_INTRO" },
     items: ["PAYMENT_CREDITS", "PAYMENT_REFUNDS", "PAYMENT_EXPIRATION"],
   },
+  { title: "AFFILIATE_TITLE", para: { key: "AFFILIATE_CONTENT" } },
+  { title: "RESELLING_TITLE", para: { key: "RESELLING_CONTENT" } },
   { title: "USER_CONTENT_TITLE", para: { key: "USER_CONTENT_CONTENT" } },
   {
     title: "THIRD_COUNTRIES_TITLE",

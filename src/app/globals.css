@@ -110,14 +110,14 @@
 }
 
 .dark {
-  --background: #050505;
+  --background: #050508;
   --foreground: #f8fafc;
-  --card: #0a0a0a;
+  --card: #0a0a10;
   --card-foreground: #f8fafc;
-  --popover: #0a0a0a;
+  --popover: #0a0a10;
   --popover-foreground: #f8fafc;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
+  --primary: #eca8d6;
+  --primary-foreground: #050508;
   --secondary: rgba(255, 255, 255, 0.05);
   --secondary-foreground: #f8fafc;
   --muted: rgba(255, 255, 255, 0.05);

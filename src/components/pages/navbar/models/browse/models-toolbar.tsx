@@ -1,6 +1,5 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -88,17 +87,6 @@ export function ModelsToolbar(props: {
           />
         )}
         <SearchBox className="relative hidden w-full max-w-xs lg:block" />
-        <Button
-          variant="outline"
-          size="sm"
-          nativeButton={false}
-          render={<Link href="/compare" />}
-          className="h-9 px-2 lg:px-3"
-          aria-label={t("MODELS.COMPARE.BADGE")}
-        >
-          <Icon name="chart-column" className="h-4 w-4 lg:mr-1.5" />
-          <span className="hidden lg:inline">{t("MODELS.COMPARE.BADGE")}</span>
-        </Button>
         <SortFilter />
         <ViewModeToggle />
       </div>

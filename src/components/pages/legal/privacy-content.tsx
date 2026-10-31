@@ -16,7 +16,6 @@ const SECTIONS: LegalDocSection[] = [
   {
     title: "SHARING_TITLE",
     para: { key: "SHARING_CONTENT" },
-    outro: { key: "SHARING_MODERATION" },
   },
   {
     title: "TRAINING_TITLE",

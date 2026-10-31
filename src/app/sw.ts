@@ -306,14 +306,14 @@ self.addEventListener("push", (event) => {
   } catch {
     payload = { body: event.data?.text() };
   }
-  const title = payload.title || "UnoRouter";
+  const title = payload.title || "adorouter";
   const options: NotificationOptions = {
     body: payload.body ?? "",
     icon: "/images/icons/icon-192.png",
     badge: "/images/icons/icon-192.png",
     tag: payload.event?.type
       ? `${payload.event.type}:${payload.event.data?.model ?? ""}`
-      : "unorouter-notify",
+      : "adorouter-notify",
     data: { url: payload.url ?? "/" },
   };
   event.waitUntil(self.registration.showNotification(title, options));

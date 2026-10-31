@@ -33,6 +33,8 @@ export function LanguageToggle() {
     });
   };
 
+  if (LANGUAGES.length < 2) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

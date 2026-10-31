@@ -20,19 +20,15 @@ export function LogoImage(
       height={32}
       {...props}
       style={{ width: size, height: size, ...props.style }}
-      className={cn("rounded-full", props.className)}
+      className={cn("rounded-lg", props.className)}
     />
   );
 }
 
 export function CompanyName(props: { className?: string }) {
-  const mid = appName.slice(1).search(/[A-Z]/) + 1;
   return (
     <span className={cn("font-bold tracking-tight", props.className)}>
-      {appName.slice(0, mid).toUpperCase()}
-      <span className="text-muted-foreground">
-        {appName.slice(mid).toUpperCase()}
-      </span>
+      {appName}
     </span>
   );
 }

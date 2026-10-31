@@ -118,7 +118,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     // Guide detail pages moved under /docs/integrations/<slug>; bare /docs is
     // now the Platform tab. 301s keep indexed + externally linked URLs alive.
-    const guideSlug = ":slug((?!chat$|platform$|integrations$)[^/]+)";
     return [
       // Static assets moved under /images; hotlinks and indexed URLs live on.
       {
@@ -129,22 +128,6 @@ const nextConfig: NextConfig = {
       {
         source: "/badges/:path*",
         destination: "/images/badges/:path*",
-        permanent: true,
-      },
-      { source: "/docs", destination: "/docs/platform", permanent: true },
-      {
-        source: `${localePattern}/docs`,
-        destination: "/:locale/docs/platform",
-        permanent: true,
-      },
-      {
-        source: `/docs/${guideSlug}`,
-        destination: "/docs/integrations/:slug",
-        permanent: true,
-      },
-      {
-        source: `${localePattern}/docs/${guideSlug}`,
-        destination: "/:locale/docs/integrations/:slug",
         permanent: true,
       },
       { source: "/free-models", destination: "/consents", permanent: true },
