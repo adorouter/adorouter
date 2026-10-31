@@ -306,7 +306,7 @@ self.addEventListener("push", (event) => {
   } catch {
     payload = { body: event.data?.text() };
   }
-  const title = payload.title || "adorouter";
+  const title = payload.title || "AdoRouter";
   const options: NotificationOptions = {
     body: payload.body ?? "",
     icon: "/images/icons/icon-192.png",

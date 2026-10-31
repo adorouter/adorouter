@@ -4,7 +4,7 @@ import { adoMetadata } from "@/components/pages/ado/ado-metadata";
 export function generateMetadata(props: {
   params: Promise<{ locale: string }>;
 }) {
-  return adoMetadata(props, "/docs", "Docs", "How to use the adorouter API.");
+  return adoMetadata(props, "/docs", "Docs", "How to use the AdoRouter API.");
 }
 
 export default function Page() {

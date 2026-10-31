@@ -70,7 +70,7 @@ async function createAutoToken(
 ): Promise<string | null> {
   const created = await addToken(
     {
-      name: "adorouter Chat",
+      name: "AdoRouter Chat",
       group: "auto",
       expired_time: -1,
       remain_quota: 0,
@@ -90,7 +90,8 @@ async function createAutoToken(
   if (!created.data?.success) return null;
   const res = await searchTokens({ p: 1, page_size: 100 }, { headers });
   const fresh = res.data?.data?.items?.find(
-    (tok) => tok && tok.status === 1 && tok.name === "adorouter Chat",
+    (tok) =>
+      tok && tok.status === 1 && tok.name.toLowerCase() === "adorouter chat",
   );
   if (!fresh) return null;
   const keyRes = await getTokenKey(String(fresh.id), {

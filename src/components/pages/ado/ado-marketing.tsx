@@ -32,12 +32,18 @@ export function AdoHome() {
         One key for your AI models
       </h1>
       <p className="text-foreground/80 mt-6 max-w-2xl text-xl leading-relaxed">
-        adorouter is an OpenAI-compatible API. Top up credits, create a key, and
+        AdoRouter is an OpenAI-compatible API. Top up credits, create a key, and
         change one line in your code. You only pay for what you use.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
-        <Button nativeButton={false} render={<Link href="/login" />}>Sign in with Discord</Button>
-        <Button variant="outline" nativeButton={false} render={<Link href="/models" />}>
+        <Button nativeButton={false} render={<Link href="/register" />}>
+          Create an account
+        </Button>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link href="/models" />}
+        >
           See models and prices
         </Button>
       </div>
@@ -58,7 +64,8 @@ export function AdoHome() {
         <div>
           <h2 className="text-lg font-semibold">Your prompts stay yours</h2>
           <p className="text-foreground/70 mt-2 leading-relaxed">
-            We don&apos;t store your prompts or responses, and we use no trackers.
+            We don&apos;t store your prompts or responses, and we use no
+            trackers.
           </p>
         </div>
       </div>
@@ -85,7 +92,7 @@ export function AdoPricing() {
             "Top up any amount from $5. Credits are shown in dollars and don't expire.",
             "Each request costs the provider's list price plus our margin, based on the input and output tokens it uses.",
             "Some providers charge less at off-peak times, so the same request can cost different amounts at different times.",
-            "New accounts that meet the requirements get a small one-time credit to try it out.",
+            "Discord accounts that meet the requirements get a small one-time credit to try it out.",
             "Any tax due is worked out at checkout, based on where you are.",
           ]}
         />
@@ -110,7 +117,9 @@ export function AdoPricing() {
         </p>
       </AdoSection>
       <div>
-        <Button nativeButton={false} render={<Link href="/billing" />}>Top up credits</Button>
+        <Button nativeButton={false} render={<Link href="/billing" />}>
+          Top up credits
+        </Button>
       </div>
     </AdoPage>
   );
@@ -120,12 +129,12 @@ export function AdoDocs() {
   return (
     <AdoPage
       title="Docs"
-      intro="adorouter is OpenAI-compatible, so most tools only need a base URL and a key."
+      intro="AdoRouter is OpenAI-compatible, so most tools only need a base URL and a key."
     >
       <AdoSection title="Quick start">
         <AdoList
           items={[
-            "Sign in with Discord. You need to be in our Discord server, with a verified email.",
+            "Create an account with an email and password, or sign in with GitHub, Google or Discord.",
             <>
               Give your consent on the{" "}
               <Link href="/consents" className="text-primary hover:underline">
@@ -179,15 +188,15 @@ export function AdoDocs() {
           ]}
         />
         <p>
-          adorouter serves text models only for now. Image, video and audio
+          AdoRouter serves text models only for now. Image, video and audio
           endpoints return a 404 with the code{" "}
           <code className="font-mono text-sm">ENDPOINT_NOT_AVAILABLE</code>.
         </p>
       </AdoSection>
       <AdoSection title="Costs">
         <p>
-          Your balance goes down by each request&apos;s cost, and your usage logs
-          show what each one cost. See{" "}
+          Your balance goes down by each request&apos;s cost, and your usage
+          logs show what each one cost. See{" "}
           <Link href="/pricing" className="text-primary hover:underline">
             Pricing
           </Link>

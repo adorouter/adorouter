@@ -355,7 +355,7 @@
     },
     "META": {
       "TITLE": "AI Models - {appName}",
-      "DESCRIPTION": "The AI models available through adorouter, with their current prices.",
+      "DESCRIPTION": "The AI models available through AdoRouter, with their current prices.",
       "KEYWORDS": "AI models, model library, AI pricing, GPT models, Claude models, Gemini models, DeepSeek models, AI model comparison, multi-model API, AI chat models"
     },
     "BADGE": "Model Library",
@@ -2431,10 +2431,10 @@
     },
     "TITLE": "Privacy Policy",
     "LAST_UPDATED": "Last Updated: October 30, 2026",
-    "INTRO": "{appName} (\"we\", \"us\", or \"our\"), run from Belgium as named in our Legal Notice, operates the {appDomain} website and API services. This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use our services. We route your requests to third-party AI model providers, so this policy also explains what happens to the prompts you send and how you can control which providers receive them. By using our services you agree to the practices described here. If you do not agree, please do not use the services.",
+    "INTRO": "{appName} (\"we\", \"us\", or \"our\") operates the {appDomain} website and API services. This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use our services. We route your requests to third-party AI model providers, so this policy also explains what happens to the prompts you send and how you can control which providers receive them. By using our services you agree to the practices described here. If you do not agree, please do not use the services.",
     "COLLECTION_TITLE": "1. Collection of Personal Data",
     "COLLECTION_VOLUNTARY_TITLE": "Information You Provide",
-    "COLLECTION_VOLUNTARY": "You sign in with Discord, which gives us your Discord ID, username, display name and verified email address. We also check whether you are a member of our Discord server each time you sign in. If you make a purchase or contact support, we receive the details you share. Payments are handled by Creem; we receive confirmation of a transaction and its amount, but we never receive or store your card number. If you follow an invite link, we note who invited you. We handle the content of the prompts you submit only for the limited purpose of routing them to the AI model provider you have selected.",
+    "COLLECTION_VOLUNTARY": "You can create an account with an email address and password, which we store only as a one-way hash. If you sign in with GitHub, Google or Discord instead, we receive the basic profile information that provider releases to us, including your email address. If you make a purchase or contact support, we receive the details you share. Payments are handled by Creem; we receive confirmation of a transaction and its amount, but we never receive or store your card number. If you follow an invite link, we note who invited you. We handle the content of the prompts you submit only for the limited purpose of routing them to the AI model provider you have selected.",
     "COLLECTION_AUTO_TITLE": "Information Collected Automatically",
     "COLLECTION_AUTO": "For your sessions and security logs, we record your IP address and browser details, and we keep a keyed hash of your sign-up IP address to limit abuse. Usage logs do not contain your IP address. For each API request we record operational metadata such as the model requested, token counts, cost, latency, whether the request succeeded, and technical details your app sends, such as its user agent or origin. This metadata is what powers your usage logs and billing. We do not store the content of your requests or the responses.",
     "COLLECTION_COOKIES_TITLE": "Cookies and Tracking Technologies",
@@ -2442,7 +2442,7 @@
     "USE_TITLE": "2. How We Use Your Personal Data",
     "USE_CONTENT": "We use the information we collect to provide and maintain our services; to route your requests to the AI model provider you select and return the response; to maintain your credit balance; to send you technical notices and security alerts; to respond to your questions and support requests; to detect, investigate, and prevent fraud, abuse, and other illegal activity; and to comply with legal obligations. We do not use the content of your prompts or the responses you receive to train AI models, we do not sell your personal information, we do not send marketing email, and we do not use analytics or advertising trackers.",
     "SHARING_TITLE": "3. How We Share Your Personal Data",
-    "SHARING_CONTENT": "We share your information only where it is necessary to run the service or where the law requires it. AI model providers: when you send a request, its content is transmitted to the upstream provider that serves the model you chose, without your IP address, your account data or your adorouter key. Each provider handles data under its own terms, and some may retain or train on what they receive. Payment processing: Creem, our merchant of record in Estonia, processes purchases under its own privacy policy. Sign-in: Discord handles sign-in under its own privacy policy. Infrastructure providers: hosting and content delivery vendors process data on our behalf. Legal and safety: we may disclose information where required by law, or where we reasonably believe disclosure is necessary to enforce our terms, investigate abuse, or protect the rights and safety of our users or the public. Business transfers: if adorouter is ever sold or merged, your information may be transferred as part of that transaction.",
+    "SHARING_CONTENT": "We share your information only where it is necessary to run the service or where the law requires it. AI model providers: when you send a request, its content is transmitted to the upstream provider that serves the model you chose, without your IP address, your account data or your AdoRouter key. Each provider handles data under its own terms, and some may retain or train on what they receive. Payment processing: Creem, our merchant of record in Estonia, processes purchases under its own privacy policy. Sign-in: if you sign in with GitHub, Google or Discord, that company handles it under its own privacy policy. Email: Resend delivers account emails such as verification codes and password resets. Bot protection: Cloudflare Turnstile checks sign-ins and sign-ups, and receives your IP address and browser details to do so. Infrastructure providers: hosting and content delivery vendors process data on our behalf. Legal and safety: we may disclose information where required by law, or where we reasonably believe disclosure is necessary to enforce our terms, investigate abuse, or protect the rights and safety of our users or the public. Business transfers: if AdoRouter is ever sold or merged, your information may be transferred as part of that transaction.",
     "SHARING_MODERATION": "Content checks for images and videos: before we carry out an image or video generation request, we send its text prompt to our merchant of record Creem in Estonia, because our payment provider requires such checks. Only the prompt text is sent, without your name, email address, IP address or any other identifier. Text requests are not checked this way. If a prompt is rejected, we keep only the result of the check in the usage log, not the prompt itself.",
     "TRAINING_TITLE": "4. Sharing with Model Providers That Use Inputs for Training",
     "TRAINING_CONTENT": "{appName} offers some models through providers that also use your inputs for their own purposes (in particular to train their models). Providers that have not published how they handle inputs are treated in the same way, because it cannot be ruled out that they use inputs for their own purposes. These providers process the data under their own responsibility. {appName} shows you which models and providers are affected when you choose a model. Passing your inputs to these providers is based not only on the performance of the contract but also on our legitimate interest in offering you the widest possible choice of AI models, including models that are only available on these terms (Art. 6(1)(f) GDPR). You choose the model yourself and are informed of the training use beforehand. Models without training use are available to you at any time. We only transmit the content of your input, not your account data, your IP address or any other identifiers.\n\nYou must not enter special categories of personal data within the meaning of Art. 9(1) GDPR, such as health data or data revealing racial or ethnic origin, political opinions, religious or philosophical beliefs or sex life, into models with training use. Our legitimate interest does not extend to such data.",
@@ -2452,7 +2452,7 @@
     "SECURITY_TITLE": "6. Data Security",
     "SECURITY_CONTENT": "We implement and maintain reasonable security measures to protect your personal information. Traffic is encrypted in transit, API keys are stored encrypted so that you can view them again in your dashboard, session cookies are HTTP-only, and access to production systems is restricted. Your API keys are credentials: anyone holding one can spend your balance, so keep them secret and revoke any key you believe has been exposed. No method of transmission over the Internet or electronic storage is completely secure, and we cannot guarantee absolute security.",
     "THIRD_PARTY_TITLE": "7. Third-Party Services",
-    "THIRD_PARTY_CONTENT": "Our services link to and integrate with services operated by other companies, including AI model providers, Creem and Discord. We do not control how those companies handle your data, and this Privacy Policy does not apply to them. We encourage you to read their policies before sharing information with them. The chat may download language model tokenizer files from Hugging Face to estimate message sizes; this sends no prompts, but Hugging Face sees your IP address, as with any download.",
+    "THIRD_PARTY_CONTENT": "Our services link to and integrate with services operated by other companies, including AI model providers, Creem, Cloudflare, Resend, GitHub, Google and Discord. We do not control how those companies handle your data, and this Privacy Policy does not apply to them. We encourage you to read their policies before sharing information with them. The chat may download language model tokenizer files from Hugging Face to estimate message sizes; this sends no prompts, but Hugging Face sees your IP address, as with any download.",
     "RETENTION_TITLE": "8. Data Retention",
     "RETENTION_CONTENT": "We retain your personal data for as long as your account is active or as needed to provide the service, comply with our legal obligations, resolve disputes, and enforce our agreements. Usage logs are kept for a limited time and then deleted. Your chat history is stored locally in your own browser rather than on our servers, so clearing it in the application or clearing your browser storage removes it. Prompt content passed to a model provider is retained by that provider according to its own policy, not ours. Records of consents to models with training use and other models that require consent, including the text you agreed to, are kept while your account exists and for up to three years after the consent ends, so that we can prove it. An objection you declare is stored as an account setting for as long as your account exists. When we no longer need data, we delete or anonymize it. Encrypted backups of our database are kept for up to 30 days, so deleted data can remain in a backup until that backup expires.",
     "CHILDREN_TITLE": "9. Age Requirements",
@@ -2463,7 +2463,7 @@
     "CHANGES_TITLE": "11. Changes to This Policy",
     "CHANGES_CONTENT": "We may update this Privacy Policy from time to time. We will post the updated policy here, update the \"Last Updated\" date above, and show you material changes when you next sign in.",
     "CONTACT_TITLE": "12. Contact Us",
-    "CONTACT_CONTENT": "If you have questions about this Privacy Policy, want to exercise a data protection right, or wish to make a complaint about how we handle your information, contact us at {supportEmail} and we will respond as quickly as we can. You also have the right to lodge a complaint with your local data protection authority. In Belgium, that is the Data Protection Authority (Gegevensbeschermingsautoriteit / Autorité de protection des données)."
+    "CONTACT_CONTENT": "If you have questions about this Privacy Policy, want to exercise a data protection right, or wish to make a complaint about how we handle your information, contact us at {supportEmail} and we will respond as quickly as we can. You also have the right to lodge a complaint with your local data protection authority."
   },
   "TERMS": {
     "META": {
@@ -2479,10 +2479,10 @@
     "ELIGIBILITY_TITLE": "2. Eligibility",
     "ELIGIBILITY_CONTENT": "You must be at least 13 years old to use the Services. If you are under 18, you must have parental or guardian consent. If you are using the Services on behalf of an organization, you represent that you have authority to bind that entity to these Terms.",
     "ACCOUNTS_TITLE": "3. Account Registration",
-    "ACCOUNTS_CONTENT": "You sign in with a Discord account that has a verified email address and is a member of our Discord server. You agree to keep your account information accurate. You are solely responsible for keeping your API keys confidential and for all activities that occur under your account.",
+    "ACCOUNTS_CONTENT": "You can use an email address and password, or a GitHub, Google or Discord account. You agree to keep your account information accurate. You are solely responsible for keeping your API keys confidential and for all activities that occur under your account.",
     "PAYMENT_TITLE": "4. Payment Terms",
     "PAYMENT_CONTENT_INTRO": "Access to the Services requires credits. Payments are handled by Creem, our merchant of record, which is the seller of your purchase and handles any tax due. Creem's terms apply to the purchase.",
-    "PAYMENT_CREDITS": "Credits: Credits are purchased in advance, shown in US dollars, and deducted as you use the Services at the provider's list price plus our margin. Some providers charge less at off-peak times, so the same request can cost different amounts at different times. The minimum top-up is $5. New accounts may receive one small free credit, once per Discord account, even if the account is deleted and created again. Credits have no cash value and cannot be transferred.",
+    "PAYMENT_CREDITS": "Credits: Credits are purchased in advance, shown in US dollars, and deducted as you use the Services at the provider's list price plus our margin. Some providers charge less at off-peak times, so the same request can cost different amounts at different times. The minimum top-up is $5. Accounts created with Discord may receive one small free credit, once per Discord account, even if the account is deleted and created again. Credits have no cash value and cannot be transferred.",
     "PAYMENT_REFUNDS": "Refunds: Refunds are handled under our Refund Policy.",
     "PAYMENT_EXPIRATION": "Expiration: Purchased credits do not expire.",
     "USER_CONTENT_TITLE": "5. User Content and Data",
@@ -2502,7 +2502,7 @@
     "INDEMNIFICATION_TITLE": "12. Indemnification",
     "INDEMNIFICATION_CONTENT": "You agree to indemnify, defend, and hold harmless {appName} from any claims, damages, losses, liabilities, costs, and expenses arising from your use of the Services, your violation of these Terms, or your infringement of any third-party rights.",
     "LAW_TITLE": "13. Governing Law",
-    "LAW_CONTENT": "These Terms are governed by the laws of Belgium. If you are a consumer, this does not take away the mandatory protections of the country where you live.",
+    "LAW_CONTENT": "These Terms shall be governed by and construed in accordance with applicable law, without regard to conflict of law principles. If you are a consumer, this does not take away the mandatory protections of the country where you live.",
     "CHANGES_TITLE": "14. Changes to These Terms",
     "CHANGES_CONTENT": "We may update these Terms from time to time. We will show you the updated Terms when you next sign in, and you will need to accept them to keep using your account.",
     "CONTACT_TITLE": "15. Contact Us",
@@ -2577,20 +2577,20 @@
     "LAST_UPDATED": "Last Updated: October 30, 2026",
     "META": {
       "TITLE": "Legal Notice - {appName}",
-      "DESCRIPTION": "Legal notice (Impressum) for {appName}: provider, address, contact details and VAT ID as required by § 5 DDG.",
-      "KEYWORDS": "legal notice, impressum, {appName} provider, imprint, contact, VAT ID"
+      "DESCRIPTION": "Legal notice for {appName}: contact details and consumer disputes.",
+      "KEYWORDS": "legal notice, {appName}, contact"
     },
-    "INTRO": "This legal notice identifies the provider of {appDomain}.",
+    "INTRO": "How to contact {appDomain}.",
     "PROVIDER_TITLE": "Provider",
-    "PROVIDER_CONTENT": "{legalName}, trading as {appName}\n{legalAddress}\nBelgium",
+    "PROVIDER_CONTENT": "{legalName}, trading as {appName}\n{legalAddress}",
     "CONTACT_TITLE": "Contact",
-    "CONTACT_CONTENT": "Email: {supportEmail}\nDiscord: {discordUrl}",
+    "CONTACT_CONTENT": "Email: {supportEmail}",
     "VAT_TITLE": "Enterprise and VAT number",
     "VAT_CONTENT": "{vatId}",
     "RESPONSIBLE_TITLE": "Responsible for content pursuant to § 18(2) MStV",
     "RESPONSIBLE_CONTENT": "{legalName}\n{legalAddress}\nGermany",
     "DISPUTE_TITLE": "Consumer disputes",
-    "DISPUTE_CONTENT": "If you are a consumer and we cannot resolve a complaint together, you can contact the Belgian Consumer Mediation Service. Payments are handled by Creem, our merchant of record and the seller of credit purchases."
+    "DISPUTE_CONTENT": "If you are a consumer and we cannot resolve a complaint together, you can contact the consumer protection authority where you live. Payments are handled by Creem, our merchant of record and the seller of credit purchases."
   },
   "MAIN": {
     "ENUM": {
@@ -2828,7 +2828,7 @@
     "TERMS_UPDATE": {
       "TITLE": "Our Terms of Service have changed",
       "INTRO": "We have updated our Terms of Service and our Privacy Policy. To continue using your account, please accept the updated Terms of Service.",
-      "CHANGES": "The main changes: adorouter now uses prepaid credits, Creem handles payments, and our rules on content and data have been updated.",
+      "CHANGES": "The main changes: AdoRouter now uses prepaid credits, Creem handles payments, and our rules on content and data have been updated.",
       "LINKS": "Please read the updated <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
       "ACCEPT": "Accept",
       "LOG_OUT": "Log out"
@@ -4094,7 +4094,7 @@
       "FORMAT": "Format",
       "TOKENIZER": "Tokenizer",
       "FORMAT_OPENAI": "OpenAI-compatible",
-      "PROXY": "Relay through adorouter",
+      "PROXY": "Relay through AdoRouter",
       "PROXY_HINT": "Only needed when the provider blocks requests from browsers. Leave it off otherwise: your browser then talks to the provider directly. When on, requests and your key pass through our server, which never stores them.",
       "TOKENIZER_AUTO": "Auto (match by name)",
       "TOKENIZER_CL100K": "GPT (cl100k)",
@@ -4143,7 +4143,7 @@
       "MODEL_SETTINGS": "Model settings",
       "MANAGE": "Manage providers",
       "ADVANCED": "Advanced",
-      "RETRY_PROXY": "Retry through adorouter"
+      "RETRY_PROXY": "Retry through AdoRouter"
     },
     "JS_PLUGIN": {
       "TITLE": "Plugins",
@@ -4162,7 +4162,7 @@
       "SCRIPT": "Code",
       "SCRIPT_PLACEHOLDER": "uno.registerHandler('output', (text) => text.toUpperCase());",
       "SCRIPT_HINT": "Runs in a sandbox with no access to your chats, files or cookies. Network requests go through the host.",
-      "SUMMARY_UNO": "adorouter plugin, active",
+      "SUMMARY_UNO": "AdoRouter plugin, active",
       "SUMMARY_JANITOR": "JanitorAI script, active",
       "SUMMARY_DISABLED": "Disabled",
       "DELETE_TITLE": "Delete plugin?",
@@ -4189,7 +4189,7 @@
     "DISCORD_CTA": "Need a preset or stuck? Ask on Discord",
     "TRUNCATED_BEFORE_TEXT": "The output limit was reached while the model was still thinking, so no reply was written. Raise max tokens or turn off reasoning for this model.",
     "LOCAL_ONLY_NOTICE": "Your chats are saved on this device. We keep no copy, so back them up yourself.",
-    "DB_HELD": "Another tab, or a page that just closed, still holds the local database, so chats cannot load. Close other adorouter tabs, or quit and reopen the browser, then try again.",
+    "DB_HELD": "Another tab, or a page that just closed, still holds the local database, so chats cannot load. Close other AdoRouter tabs, or quit and reopen the browser, then try again.",
     "DB_HELD_DOWNLOAD": "Download the raw database file",
     "DB_EMPTIED": "Your chats did not load: this device had chats, but the local database opened empty. After you continue, restore your latest backup under Tools, Database, Import SQLite file. If you deleted everything yourself, just continue.",
     "DB_EMPTIED_CONTINUE": "Continue with an empty database",
@@ -4560,8 +4560,8 @@
     "CARD_IMPORT_UNSUPPORTED": "That site is not supported yet. Ask in Discord and we will look at it.",
     "CARD_IMPORT_FETCH_FAILED": "Could not download this character. Please try again.",
     "PRESET_RISUP": "RisuAI scrambles .risup files so only RisuAI can read them. In RisuAI, export the preset as JSON instead and import that file.",
-    "PRESET_NOT_JSON": "This file is not a preset we can read. Presets are JSON files exported from adorouter, SillyTavern or RisuAI.",
-    "PRESET_UNRECOGNIZED": "This JSON does not look like a preset. Export it again from adorouter, SillyTavern or RisuAI.",
+    "PRESET_NOT_JSON": "This file is not a preset we can read. Presets are JSON files exported from AdoRouter, SillyTavern or RisuAI.",
+    "PRESET_UNRECOGNIZED": "This JSON does not look like a preset. Export it again from AdoRouter, SillyTavern or RisuAI.",
     "CARD_IMPORT_LOREBOOK_PRIVATE": "The author kept these lorebooks private, so they cannot be downloaded",
     "UNEXPECTED_ERROR": "An unexpected error occurred",
     "DB_UNAVAILABLE": "Your data could not be saved because the local database is busy. Try again in a moment.",
@@ -6238,7 +6238,7 @@
     "PUSH_PROMPT_DESCRIPTION": "Get notified about price drops and availability even when this tab is closed.",
     "PUSH_PROMPT_CONFIRM": "Enable",
     "PUSH_PROMPT_CANCEL": "Not now",
-    "PUSH_IOS_HINT": "On iPhone or iPad, add adorouter to your Home Screen first (Share, then Add to Home Screen), then enable notifications from the installed app.",
+    "PUSH_IOS_HINT": "On iPhone or iPad, add AdoRouter to your Home Screen first (Share, then Add to Home Screen), then enable notifications from the installed app.",
     "EVENT": {
       "MODEL_ONLINE": "{model} is back online",
       "MODEL_ONLINE_BODY": "Available again at {ratio}x",

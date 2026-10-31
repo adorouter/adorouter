@@ -12,7 +12,7 @@ export async function adoMetadata(
   return getPageMetadata({
     locale,
     href,
-    title: href === "/" ? title : `${title} · adorouter`,
+    title: href === "/" ? title : `${title} · AdoRouter`,
     description,
     keywords: "",
   });
