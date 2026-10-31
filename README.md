@@ -1,3 +1,5 @@
+> AdoRouter modified this software, most recently on 2026-10-31. It is based on unorouter (https://github.com/unorouter/unorouter), which builds on new-api by QuantumNous (https://github.com/QuantumNous/new-api). Both are AGPL-3.0, and so is this version. See [NOTICE](NOTICE).
+
 # UnoRouter
 
 Local-first frontend for the UnoRouter AI gateway (`new-api` fork, 130+ upstream providers). Next.js 16 + Elysia BFF on Bun. AGPL-3.0.
