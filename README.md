@@ -1,13 +1,11 @@
-> AdoRouter modified this software, most recently on 2026-10-31. It is based on unorouter (https://github.com/unorouter/unorouter), which builds on new-api by QuantumNous (https://github.com/QuantumNous/new-api). Both are AGPL-3.0, and so is this version. See [NOTICE](NOTICE).
+# AdoRouter
 
-# UnoRouter
-
-Local-first frontend for the UnoRouter AI gateway (`new-api` fork, 130+ upstream providers). Next.js 16 + Elysia BFF on Bun. AGPL-3.0.
+Local-first frontend for the AdoRouter AI gateway (`new-api` fork, 130+ upstream providers). Next.js 16 + Elysia BFF on Bun. AGPL-3.0.
 
 Surfaces:
 
 - **Gateway dashboard**: API keys, usage logs, billing, credits, gift cards, affiliate, model catalog, price comparison, status page.
-- **Chat**: RisuAI-class roleplay client. Catalog models through a same-origin proxy (the upstream token never reaches the browser) or bring your own OpenAI-compatible endpoint (browser talks to it directly). Characters, lorebooks, presets, loadouts, Lua triggers, sandboxed JS plugins, group chats, peer-to-peer rooms, in-chat image generation, SillyTavern card import.
+- **Chat**: RisuAI-class roleplay client. Catalog models through a same-origin proxy (the upstream token never reaches the browser) or bring your own OpenAI-compatible endpoint (browser talks to it directly). Lua triggers, sandboxed JS plugins, group chats, peer-to-peer rooms, in-chat image generation.
 - **AI API Model Tester**: probes an endpoint with nonce-tagged prompts to tell whether it serves the model it claims; public rankings leaderboard with server-issued (unforgeable) probe mode.
 
 Chat and tester state live in ONE SQLocal/OPFS database per device in the browser; that copy is the only copy. Everything works for guests and offline. Cross-device transfer is export/import. The server DB (Turso/libSQL) holds only the public rankings.
