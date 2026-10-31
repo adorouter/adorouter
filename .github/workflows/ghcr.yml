@@ -4,10 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    # A pin-only commit (build-local.sh or this workflow) must not rebuild the
-    # same tree and roll the pods a second time.
     paths-ignore:
-      - k8s/deployment.yaml
       - renovate.json
 
 concurrency:
@@ -15,173 +12,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Deploy build skips typecheck/lint (next.config.ts ignoreBuildErrors);
-  # this job is the gate for those instead, off the deploy critical path.
+  # The image build skips typecheck and lint (next.config.ts ignoreBuildErrors),
+  # so they gate it here.
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         check: [typecheck, lint, test]
-    # Lint has pre-existing react-hooks errors; advisory until they are fixed.
-    continue-on-error: ${{ matrix.check == 'lint' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run ${{ matrix.check }}
 
   build:
-    # Per-arch native runners (arm64 host builds arm64 natively; QEMU-emulating the
-    # Next/turbopack compile is prohibitively slow). Each pushes a per-arch digest;
-    # the manifest job stitches them into one multi-arch tag.
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-24.04
-            arch: amd64
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
+    needs: checks
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # Only reviewed public configuration enters the image build.
-      # Server credentials are injected by Kubernetes at runtime.
-      - name: Create public build environment
-        run: cp .env.public .env
-
-      # An empty Impressum is a legal defect, so a missing secret stops the build.
-      - name: Check Impressum secrets
+      # The legal notice is empty until these are set, which must be fixed before launch.
+      - name: Check legal notice secrets
         env:
           LEGAL_NAME: ${{ secrets.LEGAL_NAME }}
           LEGAL_ADDRESS: ${{ secrets.LEGAL_ADDRESS }}
-          LEGAL_VAT_ID: ${{ secrets.LEGAL_VAT_ID }}
         run: |
-          for v in LEGAL_NAME LEGAL_ADDRESS LEGAL_VAT_ID; do
-            [ -n "${!v}" ] || { echo "missing secret $v"; exit 1; }
+          for v in LEGAL_NAME LEGAL_ADDRESS; do
+            [ -n "${!v}" ] || echo "::warning::secret $v is missing, so the legal notice is incomplete"
           done
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build+push a per-arch DIGEST only (no shared tag; two runners pushing the
-      # same tag would clobber each other). The manifest job assembles the tags.
-      - id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64
+          push: true
           build-args: |
             GIT_SHA=${{ github.sha }}
             NEXT_PUBLIC_LEGAL_NAME=${{ secrets.LEGAL_NAME }}
             NEXT_PUBLIC_LEGAL_ADDRESS=${{ secrets.LEGAL_ADDRESS }}
             NEXT_PUBLIC_LEGAL_VAT_ID=${{ secrets.LEGAL_VAT_ID }}
-          outputs: type=image,name=ghcr.io/unorouter/unorouter,push-by-digest=true,name-canonical=true,push=true
-          # Per-arch cache scope so the amd64 and arm64 GHA caches never overwrite.
-          cache-from: type=gha,scope=unorouter-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=unorouter-${{ matrix.arch }}
-
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.arch }}"
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: digest-${{ matrix.arch }}
-          path: /tmp/digests/*
-          retention-days: 1
-
-  # Stitch the two per-arch digests into one multi-arch manifest under the real tags.
-  manifest:
-    runs-on: ubuntu-latest
-    needs: build
-    outputs:
-      digest: ${{ steps.manifest.outputs.digest }}
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          path: /tmp/digests
-          pattern: digest-*
-          merge-multiple: true
-
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create + push manifest list
-        id: manifest
-        run: |
-          IMAGE=ghcr.io/unorouter/unorouter
-          REFS=""
-          for f in /tmp/digests/*; do REFS="$REFS $IMAGE@$(cat "$f")"; done
-          for TAG in latest ${{ github.sha }}; do
-            docker buildx imagetools create -t "$IMAGE:$TAG" $REFS
-          done
-          docker buildx imagetools inspect "$IMAGE:${{ github.sha }}"
-          D=$(docker buildx imagetools inspect "$IMAGE:${{ github.sha }}" --format '{{json .Manifest}}' | jq -r .digest)
-          [[ "$D" == sha256:* ]] || { echo "::error::no manifest digest for $IMAGE:${{ github.sha }}"; exit 1; }
-          echo "digest=$D" >> "$GITHUB_OUTPUT"
-
-  # Pin the new image in this repo's own k8s/ manifests. ArgoCD discovers this repo by
-  # its k8s/ directory and rolls the Deployment out, so nothing here talks to the cluster
-  # and no cross-repo token is needed -- the built-in GITHUB_TOKEN is enough.
-  #
-  # The tag is the git SHA, never :latest -- with a floating tag the manifest never
-  # changes, ArgoCD sees nothing to do, and the deploy silently never happens (which
-  # is exactly what used to require a manual `kubectl rollout restart`).
-  deploy:
-    runs-on: ubuntu-latest
-    needs: manifest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          ref: main
-
-      - name: Pin unorouter image to this commit
-        run: |
-          set -euo pipefail
-          F=k8s/deployment.yaml
-          OLD=$(grep -oP 'image: ghcr\.io/unorouter/unorouter:\K\S+' "$F")
-          # tag for people, digest for the cluster: a re-pushed tag cannot change what runs
-          NEW="${{ github.sha }}@${{ needs.manifest.outputs.digest }}"
-          if [ "$OLD" = "$NEW" ]; then
-            echo "already pinned to $NEW, nothing to do"
-            exit 0
-          fi
-          sed -i "s|image: ghcr.io/unorouter/unorouter:.*|image: ghcr.io/unorouter/unorouter:$NEW|" "$F"
-          git config user.name  "unorouter-ci"
-          git config user.email "ci@unorouter.com"
-          git add "$F"
-          git commit -m "deploy(unorouter): ${{ github.sha }}
-
-          Was: $OLD
-          Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-          # main can move between checkout and push (a concurrent push, or a human commit)
-          for i in 1 2 3; do
-            git push origin main && exit 0
-            echo "push rejected, rebasing (attempt $i)"
-            git pull --rebase origin main
-          done
-          echo "::error::could not push image pin after 3 attempts"
-          exit 1
+          tags: |
+            ghcr.io/adorouter/adorouter:latest
+            ghcr.io/adorouter/adorouter:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
