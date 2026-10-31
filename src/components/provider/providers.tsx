@@ -10,7 +10,6 @@ import { WebMcpProvider } from "./app/webmcp-provider";
 import { JotaiProvider } from "./state/jotai-provider";
 import { UserThemeStoreProvider } from "./state/user-theme-store-provider";
 import { QueryProvider } from "./state/query-provider";
-import { DbTransferDialogLoader } from "@/components/pages/sidebar/chat/chat-actions-menu/db-transfer-dialog-loader";
 
 export function Providers(props: {
   children: ReactNode;
@@ -25,7 +24,6 @@ export function Providers(props: {
               <UserThemeProvider>
                 <WebMcpProvider />
                 <ConfirmProvider />
-                <DbTransferDialogLoader />
                 <TriggerAlertProvider />
                 <TooltipProvider>{props.children}</TooltipProvider>
               </UserThemeProvider>

@@ -52,9 +52,7 @@ import {
   resetSampling,
   writeSamplerMemory,
 } from "./form-handler";
-import { ImageRefsField } from "./image-refs-field";
 import {
-  OverridesBindingFields,
   OverridesGenerationFields,
   OverridesPromptFields,
 } from "./override-fields";
@@ -144,11 +142,6 @@ export function ConversationOverridesDrawer(props: DrawerProps) {
   });
   useMarkDirtyForm(form.formState.isDirty);
 
-  const webSearchEnabled = useWatch({
-    control: form.control,
-    name: "webSearchEnabled",
-  });
-
   const onSubmit = async (data: ConversationOverridesForm) => {
     logChatDebug("settings.saved", {
       convId: props.convId,
@@ -227,18 +220,7 @@ export function ConversationOverridesDrawer(props: DrawerProps) {
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="flex flex-col gap-5 px-4">
-              {showConversationFields && (
-                <OverridesBindingFields control={form.control} />
-              )}
-
-              <OverridesGenerationFields
-                control={form.control}
-                webSearchEnabled={webSearchEnabled}
-              />
-
-              {showConversationFields && (
-                <ImageRefsField convId={props.convId!} />
-              )}
+              <OverridesGenerationFields control={form.control} />
 
               <SamplingFields
                 control={form.control}

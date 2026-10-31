@@ -3,7 +3,6 @@ import { PullToRefresh } from "@/components/pages/sidebar/chat/runtime/pull-to-r
 import { BackupReminder } from "@/components/pages/sidebar/chat/runtime/backup-reminder";
 import { PriceWatch } from "@/components/pages/sidebar/chat/runtime/price-watch";
 import { SidebarLayout } from "@/components/layout/sidebar/sidebar-layout";
-import { RpDialogs } from "@/components/pages/sidebar/chat/rp/rp-dialogs";
 import { ChatRuntimeProvider } from "@/components/pages/sidebar/chat/runtime/chat-runtime-provider";
 import { ViewportDebugLogger } from "@/components/pages/sidebar/chat/viewport-debug-logger";
 import { ConversationList } from "@/components/pages/sidebar/chat/sidebar/conversation-list";
@@ -11,9 +10,9 @@ import { AuthHydration } from "@/components/provider/state/auth-hydration";
 import { ChatStoreProvider } from "@/components/provider/state/chat-store-provider";
 import getQueryClient from "@/lib/react-query/client";
 import { queryKeys } from "@/lib/react-query/keys";
-import { prefetchElysia } from "@/lib/react-query/prefetch";
+import { prefetchAuth, prefetchElysia } from "@/lib/react-query/prefetch";
 import { rpc } from "@/lib/rpc";
-import { getCookieValue } from "@/lib/utils/server";
+import { getCookieValue, redirectToLogin } from "@/lib/utils/server";
 import { CHAT_STORE_KEY, type ChatState } from "@/store/chat-store";
 
 type Props = {
@@ -27,6 +26,11 @@ type Props = {
 // pricing list stays out of here.
 export default async function ChatLayout(props: Props) {
   const queryClient = getQueryClient();
+  // adorouter has no guest access, so the chat needs an account like the dashboard.
+  const expired = await prefetchAuth(queryClient);
+  if (!queryClient.getQueryData(queryKeys.auth())) {
+    await redirectToLogin({ expired });
+  }
   const [chatStoreCookie] = await Promise.all([
     getCookieValue<ChatState>(CHAT_STORE_KEY),
     prefetchElysia(queryClient, queryKeys.pricingCatalog(), () =>
@@ -52,7 +56,6 @@ export default async function ChatLayout(props: Props) {
           >
             {props.children}
           </SidebarLayout>
-          <RpDialogs />
         </ChatRuntimeProvider>
       </ChatStoreProvider>
     </AuthHydration>

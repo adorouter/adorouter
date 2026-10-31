@@ -21,7 +21,6 @@ import {
 } from "@/lib/utils/backup-reminder";
 import { logChatDebug } from "@/lib/utils/chat-debug-log";
 import { logger } from "@/lib/utils/logger";
-import { dbTransferAtom } from "@/store/chat-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
@@ -30,7 +29,6 @@ import { toast } from "sonner";
 
 export function DatabaseSubmenu() {
   const t = useTranslations();
-  const setTransfer = useSetAtom(dbTransferAtom);
   const qc = useQueryClient();
   const [reminderDays, setReminderDays] = useState(
     () => readBackupState().intervalDays,
@@ -188,14 +186,6 @@ export function DatabaseSubmenu() {
             {t("CHAT.MORE.LOCAL_DB_UPLOAD")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setTransfer({ mode: "send", opts })}>
-            <Icon name="send" className="size-4" />
-            {t("CHAT.MORE.LOCAL_DB_SEND")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTransfer({ mode: "receive" })}>
-            <Icon name="download" className="size-4" />
-            {t("CHAT.MORE.LOCAL_DB_RECEIVE")}
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>

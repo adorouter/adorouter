@@ -4,7 +4,6 @@ import { uid } from "@/lib/utils/base";
 import { API_ENDPOINTS } from "@/lib/ai/endpoints";
 import { groupHeader, upstreamApiUrl } from "@/server/constants";
 import { serverEnv } from "@/server/env";
-import { resumableResponse } from "./stream-buffer";
 
 const FORWARD_RESPONSE_HEADERS = [
   "content-type",
@@ -73,13 +72,7 @@ export async function forwardChatCompletions(args: {
     }
     if (!upstream.ok || !upstream.body)
       return new Response(upstream.body, { status: upstream.status, headers });
-    return resumableResponse(
-      upstream.body,
-      args.userId,
-      abort,
-      upstream.status,
-      headers,
-    );
+    return new Response(upstream.body, { status: upstream.status, headers });
   }
 
   // Cloudflare kills a byte-less origin response at ~100s (524, whose raw HTML
@@ -157,13 +150,10 @@ export async function forwardChatCompletions(args: {
       abort.abort();
     },
   });
-  return resumableResponse(
-    stream,
-    args.userId,
-    abort,
-    200,
-    new Headers({ "content-type": "text/event-stream" }),
-  );
+  return new Response(stream, {
+    status: 200,
+    headers: new Headers({ "content-type": "text/event-stream" }),
+  });
 }
 
 const EARLY_FLUSH_MS = 30_000;

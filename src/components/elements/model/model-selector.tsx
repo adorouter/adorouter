@@ -218,15 +218,6 @@ function CustomProviderItems(props: {
             );
           }),
       )}
-      <CommandItem
-        value="custom-providers-manage"
-        keywords={[t("CHAT.CUSTOM_PROVIDER.MANAGE")]}
-        onSelect={() => router.push("/chat/providers")}
-        className="text-muted-foreground text-xs"
-      >
-        <Icon name="settings-2" className="h-3.5 w-3.5 shrink-0" />
-        <span>{t("CHAT.CUSTOM_PROVIDER.MANAGE")}</span>
-      </CommandItem>
     </CommandGroup>
   );
 }

@@ -49,64 +49,8 @@ import {
   WEB_SEARCH_ENGINE_KEY,
 } from "./form-handler";
 
-export function OverridesBindingFields(props: {
-  control: Control<ConversationOverridesForm>;
-}) {
-  const t = useTranslations();
-  const charactersQuery = useCharactersQuery();
-  const personasQuery = usePersonasQuery();
-  const lorebooksQuery = useLorebooksQuery();
-  const presetsQuery = usePresetsQuery();
-
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-3">
-        <MyFormEntitySelect
-          control={props.control}
-          name="personaId"
-          label={t("CHAT.OVERRIDES.PERSONA")}
-          noneLabel={t("CHAT.OVERRIDES.NONE")}
-          options={personasQuery.data?.map((p) => ({
-            id: p.id,
-            name: p.title ? `${p.title} (${p.name})` : p.name,
-            avatarMediaId: p.avatarMediaId,
-          }))}
-        />
-        <MyFormEntitySelect
-          control={props.control}
-          name="presetId"
-          label={t("CHAT.OVERRIDES.PRESET")}
-          noneLabel={t("CHAT.OVERRIDES.NONE")}
-          options={presetsQuery.data}
-        />
-      </div>
-
-      <MyFormCombobox
-        control={props.control}
-        name="characterIds"
-        label={t("CHAT.OVERRIDES.CHARACTERS")}
-        searchPlaceholder={t("CHAT.OVERRIDES.SEARCH_CHARACTERS")}
-        emptyText={t("CHAT.OVERRIDES.NO_CHARACTERS")}
-        reorderHint={t("CHAT.OVERRIDES.REORDER_HINT")}
-        options={charactersQuery.data}
-      />
-
-      <MyFormCombobox
-        control={props.control}
-        name="lorebookIds"
-        label={t("CHAT.OVERRIDES.LOREBOOKS")}
-        searchPlaceholder={t("CHAT.OVERRIDES.SEARCH_LOREBOOKS")}
-        emptyText={t("CHAT.OVERRIDES.NO_LOREBOOKS")}
-        reorderHint={t("CHAT.OVERRIDES.REORDER_HINT")}
-        options={lorebooksQuery.data}
-      />
-    </>
-  );
-}
-
 export function OverridesGenerationFields(props: {
   control: Control<ConversationOverridesForm>;
-  webSearchEnabled: boolean;
 }) {
   const t = useTranslations();
 
@@ -228,69 +172,7 @@ export function OverridesGenerationFields(props: {
             </FormItem>
           )}
         />
-        <>
-          <FormField
-            control={props.control}
-            name="webSearchEnabled"
-            render={({ field }) => (
-              <FormItem className="flex-row items-center gap-2">
-                <FormLabel className="text-xs">
-                  {t("CHAT.OVERRIDES.WEB_SEARCH")}
-                </FormLabel>
-                <FormControl>
-                  <Switch
-                    size="sm"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={props.control}
-            name="memoryEnabled"
-            render={({ field }) => (
-              <FormItem className="flex-row items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <FormLabel className="text-xs">
-                    {t("CHAT.OVERRIDES.MEMORY_ENABLED")}
-                  </FormLabel>
-                  <InfoPopover text={t("CHAT.OVERRIDES.MEMORY_ENABLED_HINT")} />
-                </div>
-                <FormControl>
-                  <Switch
-                    size="sm"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </>
       </div>
-
-      {props.webSearchEnabled && (
-        <div className="grid grid-cols-2 gap-3">
-          <MyFormKeyedSelect
-            control={props.control}
-            name="webSearchEngine"
-            label={t("CHAT.OVERRIDES.WEB_SEARCH_ENGINE")}
-            fallback="auto"
-            optionKeys={WEB_SEARCH_ENGINE_KEY}
-            labelClassName="text-muted-foreground text-xs"
-          />
-          <MyFormKeyedSelect
-            control={props.control}
-            name="webSearchContextSize"
-            label={t("CHAT.OVERRIDES.WEB_SEARCH_CONTEXT_SIZE")}
-            fallback="medium"
-            optionKeys={WEB_SEARCH_CONTEXT_KEY}
-            labelClassName="text-muted-foreground text-xs"
-          />
-        </div>
-      )}
 
       <span className="text-muted-foreground text-xs">
         {t("CHAT.OVERRIDES.STREAMING_ENABLED_HINT")}
@@ -301,75 +183,6 @@ export function OverridesGenerationFields(props: {
       </span>
 
       <div className="flex flex-col gap-3 border-t pt-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <FormField
-            control={props.control}
-            name="imageEnabled"
-            render={({ field }) => (
-              <FormItem className="flex-row items-center gap-2">
-                <FormLabel className="text-xs">
-                  {t("CHAT.OVERRIDES.IMAGE_ENABLED")}
-                </FormLabel>
-                <FormControl>
-                  <Switch
-                    size="sm"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={props.control}
-            name="imagePreview"
-            render={({ field }) => (
-              <FormItem className="flex-row items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <FormLabel className="text-xs">
-                    {t("CHAT.OVERRIDES.IMAGE_PREVIEW")}
-                  </FormLabel>
-                  <InfoPopover text={t("CHAT.OVERRIDES.IMAGE_PREVIEW_HINT")} />
-                </div>
-                <FormControl>
-                  <Switch
-                    size="sm"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={props.control}
-            name="useCharAvatarRef"
-            render={({ field }) => (
-              <FormItem className="flex-row items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <FormLabel className="text-xs">
-                    {t("CHAT.OVERRIDES.USE_CHAR_AVATAR_REF")}
-                  </FormLabel>
-                  <InfoPopover
-                    text={t("CHAT.OVERRIDES.USE_CHAR_AVATAR_REF_HINT")}
-                  />
-                </div>
-                <FormControl>
-                  <Switch
-                    size="sm"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-        <UtilityModelField
-          control={props.control}
-          name="utilityModel"
-          labelKey="CHAT.OVERRIDES.UTILITY_MODEL"
-        />
         <UtilityModelField
           control={props.control}
           name="titleModel"
@@ -377,12 +190,6 @@ export function OverridesGenerationFields(props: {
           hintKey="CHAT.OVERRIDES.TITLE_MODEL_HINT"
         />
         <TitlePromptField control={props.control} />
-        <ImageModelField
-          control={props.control}
-          name="imageModel"
-          labelKey="CHAT.OVERRIDES.IMAGE_MODEL"
-        />
-        <ImagePromptInstructionField control={props.control} />
       </div>
     </>
   );
@@ -415,66 +222,10 @@ function TitlePromptField(props: {
   );
 }
 
-function ImagePromptInstructionField(props: {
-  control: Control<ConversationOverridesForm>;
-}) {
-  const t = useTranslations();
-  const form = useFormContext<ConversationOverridesForm>();
-  return (
-    <FormField
-      control={props.control}
-      name="promptInstruction"
-      render={({ field }) => (
-        <FormItem>
-          <div className="flex items-center justify-between">
-            <FormLabel className="text-muted-foreground text-xs">
-              {t("CHAT.OVERRIDES.IMAGE_PROMPT_INSTRUCTION")}
-            </FormLabel>
-            <Select
-              value=""
-              onValueChange={(id) => {
-                const tpl = IMAGE_STYLE_TEMPLATES.find((x) => x.id === id);
-                if (!tpl) return;
-                form.setValue("promptInstruction", tpl.instruction, {
-                  shouldDirty: true,
-                });
-              }}
-            >
-              <SelectTrigger size="sm" className="h-7 w-36 text-xs">
-                <SelectValue
-                  placeholder={t("CHAT.OVERRIDES.IMAGE_STYLE_TEMPLATE")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {IMAGE_STYLE_TEMPLATES.map((tpl) => (
-                  <SelectItem key={tpl.id} value={tpl.id}>
-                    {t(tpl.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <FormControl>
-            <Textarea
-              className="min-h-16 text-xs"
-              placeholder={t(
-                "CHAT.OVERRIDES.IMAGE_PROMPT_INSTRUCTION_PLACEHOLDER",
-              )}
-              value={field.value}
-              onChange={field.onChange}
-            />
-          </FormControl>
-        </FormItem>
-      )}
-    />
-  );
-}
-
 export function OverridesPromptFields(props: {
   control: Control<ConversationOverridesForm>;
 }) {
   const t = useTranslations();
-  const [focusMemory, setFocusMemory] = useAtom(focusMemoryFieldAtom);
 
   return (
     <>
@@ -524,56 +275,6 @@ export function OverridesPromptFields(props: {
           </FormItem>
         )}
       />
-
-      <div className="flex flex-col gap-2">
-        <FormField
-          control={props.control}
-          name="authorNote"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center gap-1.5">
-                <FormLabel>{t("CHAT.OVERRIDES.AUTHOR_NOTE")}</FormLabel>
-                <InfoPopover text={t("CHAT.OVERRIDES.AUTHOR_NOTE_HINT")} />
-              </div>
-              <FormControl>
-                <Textarea
-                  {...field}
-                  ref={(el) => {
-                    field.ref(el);
-                    if (!el || !focusMemory) return;
-                    setFocusMemory(false);
-                    el.scrollIntoView({ block: "center" });
-                    el.focus({ preventScroll: true });
-                  }}
-                  placeholder={t("CHAT.OVERRIDES.AUTHOR_NOTE_PLACEHOLDER")}
-                  rows={3}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={props.control}
-          name="authorNoteDepth"
-          render={({ field }) => (
-            <FormItem className="flex-row items-center justify-between">
-              <Label className="text-muted-foreground text-xs">
-                {t("CHAT.OVERRIDES.AUTHOR_NOTE_DEPTH")}
-              </Label>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={field.value}
-                  onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                  className="w-20"
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </div>
     </>
   );
 }

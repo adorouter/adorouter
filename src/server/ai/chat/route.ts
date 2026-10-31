@@ -149,11 +149,10 @@ export const chatRoute = new Elysia({ prefix: "/chat" })
       await assertGuestFreeModel(userId, body.titleModel);
       await assertGuestOwnPurposeAccess(cookie, userId, body.model);
       await assertGuestOwnPurposeAccess(cookie, userId, body.titleModel);
-      // A guest's text may only reach a model the guest consented to, so the
-      // free trio is off the table and the chat model titles its own chat.
-      const titleModel =
-        body.titleModel ?? (userId === GUEST_USER_ID ? body.model : undefined);
-      if (userId === GUEST_USER_ID && !titleModel)
+      // No free models here, and a title shouldn't bill the user unless they chose a
+      // title model, so the default is the start of their message.
+      const titleModel = body.titleModel;
+      if (!titleModel)
         return { success: true, data: { title: truncateToTitle(body.text) } };
       const data = await generateChatTitle(apiKey, body.text, {
         titleModel,

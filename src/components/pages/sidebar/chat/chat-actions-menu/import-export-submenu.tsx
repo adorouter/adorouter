@@ -12,9 +12,7 @@ import {
   useImportConversationMutation,
 } from "@/hooks/ai/rp/conversations";
 import { env } from "@/lib/config/env";
-import { exportLocalConversationSillyTavern } from "@/lib/db/client/data/transfer/sillytavern";
 import { downloadBlob, downloadJson } from "@/lib/utils/client";
-import type { ExportFormat } from "@/lib/validation/rp";
 import { useAui } from "@assistant-ui/react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -30,19 +28,8 @@ export function ImportExportSubmenu(props: Props) {
   const importMut = useImportConversationMutation();
   const hasConv = !!props.convId;
 
-  const handleExport = async (format: ExportFormat) => {
+  const handleExport = async (format: "native") => {
     if (!props.convId) return;
-
-    if (format === "sillytavern") {
-      try {
-        const result = await exportLocalConversationSillyTavern(props.convId);
-        const blob = new Blob([result.data], { type: "application/jsonl" });
-        downloadBlob(blob, result.filename);
-      } catch {
-        toast.error(t("CHAT.MORE.EXPORT_FAILED"));
-      }
-      return;
-    }
     const data = await exportMut.mutateAsync({ convId: props.convId, format });
     downloadJson(data, `${env.appName.toLowerCase()}-chat-${format}.json`);
   };
@@ -89,20 +76,6 @@ export function ImportExportSubmenu(props: Props) {
           >
             <Icon name="download" className="size-4" />
             {t("CHAT.MORE.EXPORT_NATIVE")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!hasConv || exportMut.isPending}
-            onClick={() => handleExport("orpg")}
-          >
-            <Icon name="download" className="size-4" />
-            {t("CHAT.MORE.EXPORT_ORPG")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!hasConv}
-            onClick={() => handleExport("sillytavern")}
-          >
-            <Icon name="download" className="size-4" />
-            {t("CHAT.MORE.EXPORT_SILLYTAVERN")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

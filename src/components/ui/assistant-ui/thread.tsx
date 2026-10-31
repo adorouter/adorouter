@@ -1,12 +1,9 @@
 "use client";
 
 import type { CssVars } from "@/lib/types";
-import { Link } from "@/i18n/navigation";
 import { VendorIcon } from "@/components/elements/brand/vendor-icon";
 import { SectionBoundary } from "@/components/elements/feedback/section-boundary";
 import { ConversationStats } from "@/components/pages/sidebar/chat/chat-elements";
-import { ChatLoadout } from "@/components/pages/sidebar/chat/chat-loadout";
-import { GreetingPreview } from "@/components/pages/sidebar/chat/greeting-preview";
 import { RequestLogButton } from "@/components/pages/sidebar/chat/request-log/request-log-button";
 import {
   ComposerAddAttachment,
@@ -84,8 +81,6 @@ import { NONE_VALUE } from "@/lib/config/constants";
 import { useStorageBlocked } from "@/hooks/ai/use-storage-blocked";
 import { useChatSettingsQuery } from "@/hooks/ai/rp/conversations";
 import { updateLocalConversationSettings } from "@/lib/db/client/data/chat/chat";
-import { usePersonasQuery } from "@/hooks/ai/rp/personas";
-import { RpAvatar } from "@/components/pages/sidebar/chat/rp/shared/rp-list-parts";
 import { logChatDebug } from "@/lib/utils/chat-debug-log";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
@@ -540,22 +535,13 @@ const ThreadWelcome: FC = () => {
               {t("CHAT.EMPTY_DESCRIPTION")}
             </p>
           </div>
-          {/* Users arriving from JanitorAI/SillyTavern assume a web app stores
-              chats server-side, then ask whether we read them. Say it up front,
-              next to where the backup that this implies is explained. */}
-          <Link
-            href={{
-              pathname: "/docs/chat/[slug]",
-              params: { slug: "backups" },
-            }}
-            className="border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground hover:border-border flex max-w-md items-start gap-2 rounded-lg border px-3 py-2 text-xs transition-colors"
-          >
+          {/* Users assume a web app stores chats server-side, then ask whether
+              we read them. Say it up front. */}
+          <div className="border-border/60 bg-muted/40 text-muted-foreground flex max-w-md items-start gap-2 rounded-lg border px-3 py-2 text-xs">
             <Icon name="shield-check" className="mt-0.5 size-3.5 shrink-0" />
             <span>{t("CHAT.LOCAL_ONLY_NOTICE")}</span>
-          </Link>
+          </div>
           <StorageBlockedNotice />
-          <ChatLoadout />
-          <GreetingPreview />
           {env.discordUrl && (
             <a
               href={env.discordUrl}
@@ -670,33 +656,6 @@ const Composer: FC = () => {
   );
 };
 
-const ComposerWebSearchToggle: FC = () => {
-  const t = useTranslations();
-  const hydrated = useHydrated();
-  const authQuery = useAuthQuery();
-  const [webSearch, setWebSearch] = useAtom(chatWebSearchAtom);
-  // Auth-gated: the streamed auth data can be present on the server but not yet in the client query
-  // cache during the hydration render (or vice versa), mismatching this subtree. Render nothing until
-  // hydration so server + first client paint agree; the toggle pops in right after for logged-in users.
-  if (!hydrated || !authQuery.data) return null;
-  return (
-    <TooltipIconButton
-      tooltip={webSearch ? t("CHAT.WEB_SEARCH.ON") : t("CHAT.WEB_SEARCH.OFF")}
-      variant={webSearch ? "default" : "ghost"}
-      className="aui-composer-web-search size-8 rounded-full transition-colors"
-      onClick={() => {
-        setWebSearch(!webSearch);
-      }}
-    >
-      {webSearch ? (
-        <Icon name="globe" className="size-4" />
-      ) : (
-        <Icon name="globe-lock" className="size-4" />
-      )}
-    </TooltipIconButton>
-  );
-};
-
 const ComposerContinueButton: FC = () => {
   const t = useTranslations();
   const threadRuntime = useAui().thread;
@@ -783,72 +742,7 @@ const StorageBlockedNotice: FC = () => {
   );
 };
 
-const CONTINUE_PROMPT = "(OOC: Continue.)";
-
-// Writes into the composer and never into history, so the draft stays the
-// user's to edit or discard. An empty composer asks for a fresh message; a
-// non-empty one rewrites what is already there rather than replacing it blind,
-// because losing a half-written draft to a misfire is the loudest complaint
-// about the equivalent feature elsewhere.
-const ComposerImpersonateButton: FC = () => {
-  const t = useTranslations();
-  const aui = useAui();
-  const convId = useAuiState((s) => s.threadListItem?.remoteId);
-  const draft = useAuiState((s) => s.composer.text);
-  const isRunning = useAuiState((s) => s.thread.isRunning);
-  const [busy, setBusy] = useState(false);
-  // Shown without a conversation too: a blank new chat is exactly when a blank
-  // page is hardest to start.
-  if (isRunning) return null;
-  const enhancing = draft.trim().length > 0;
-  return (
-    <TooltipIconButton
-      tooltip={t(
-        enhancing
-          ? "CHAT.ACTION.IMPERSONATE_ENHANCE"
-          : "CHAT.ACTION.IMPERSONATE",
-      )}
-      variant="ghost"
-      className={`aui-composer-impersonate h-8 rounded-full ${busy ? "w-auto px-2.5" : "w-8"}`}
-      disabled={busy}
-      onClick={async () => {
-        setBusy(true);
-        try {
-          const { runImpersonate } =
-            await import("@/components/pages/sidebar/chat/runtime/impersonate-run");
-          aui.composer().setText(await runImpersonate(convId ?? null, draft));
-        } catch (e) {
-          const { SpokeAsCharacterError } =
-            await import("@/components/pages/sidebar/chat/runtime/impersonate-run");
-          const detail = extractErrorDetail(e);
-          logChatDebug("impersonate.failed", {
-            convId: convId ?? null,
-            draftChars: draft.length,
-            status: detail.status ?? null,
-            error: detail.message.slice(0, 300),
-          });
-          toast.error(
-            e instanceof SpokeAsCharacterError
-              ? t("CHAT.ACTION.IMPERSONATE_AS_CHAR")
-              : detail.message || t("ERRORS.REQUEST_FAILED"),
-          );
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <Icon
-        name={busy ? "loader-circle" : "sparkles"}
-        className={`size-4 ${busy ? "animate-spin" : ""}`}
-      />
-      {busy && (
-        <span className="text-muted-foreground ml-1.5 text-xs">
-          {t("CHAT.ACTION.IMPERSONATE_WORKING")}
-        </span>
-      )}
-    </TooltipIconButton>
-  );
-};
+const CONTINUE_PROMPT = "Continue.";
 
 const ComposerAction: FC = () => {
   const t = useTranslations();
@@ -866,9 +760,7 @@ const ComposerAction: FC = () => {
     <div className="aui-composer-action-wrapper relative flex items-center justify-between">
       <div className="text-primary flex items-center">
         <ComposerAddAttachment />
-        <ComposerWebSearchToggle />
         <ComposerContinueButton />
-        <ComposerImpersonateButton />
       </div>
       <AuiIf condition={(s) => !s.thread.isRunning}>
         {emptySend ? (
@@ -1353,29 +1245,11 @@ const ModelLabel: FC = () => {
 };
 
 const AssistantMessageHeader: FC = () => {
-  const speakingCharacter = useSpeakingCharacter();
-  const lorebookSpeaker = useLorebookSpeaker();
-  const character = speakingCharacter ?? lorebookSpeaker;
   const meta = useMessageMeta();
-
-  // A streaming reply has no persisted row yet, so the model label is absent
-  // while the character is already known.
-  if (!character && !meta?.model) return null;
+  if (!meta?.model) return null;
 
   return (
-    <div className="text-muted-foreground mb-1 ml-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-      {character ? (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <RpAvatar
-            mediaId={character.avatarMediaId}
-            name={character.name}
-            className="size-[calc(1.25rem*var(--chat-avatar,1))]"
-          />
-          <span className="text-foreground truncate font-medium">
-            {character.name}
-          </span>
-        </span>
-      ) : null}
+    <div className="text-muted-foreground mb-1 ml-4 flex flex-wrap items-center gap-x-2 text-xs">
       <ModelLabel />
     </div>
   );
@@ -1505,34 +1379,6 @@ const AssistantActionBar: FC = () => {
   );
 };
 
-// The persona is the user's own face in an RP, so it belongs on their turns the
-// way a character avatar belongs on the reply. Null whenever no persona is
-// bound, which is the ordinary non-RP case.
-const UserPersonaAvatar: FC = () => {
-  const convId = useAuiState((s) => s.threadListItem?.remoteId);
-  const settings = useChatSettingsQuery(convId ?? undefined).data;
-  const personas = usePersonasQuery().data;
-  const personaId =
-    settings?.personaId && settings.personaId !== NONE_VALUE
-      ? settings.personaId
-      : null;
-  const persona = personas?.find((p) => p.id === personaId);
-  if (!persona) return null;
-  const name = persona.title || persona.name;
-  return (
-    // Avatar first, like the assistant header: mirroring the order instead
-    // reads as a different component rather than the same one on the other side.
-    <div className="text-muted-foreground col-span-full col-start-1 row-start-1 mr-4 mb-1 flex items-center justify-end gap-1.5 text-[11px]">
-      <RpAvatar
-        mediaId={persona.avatarMediaId}
-        name={name}
-        className="size-[calc(1.25rem*var(--chat-avatar,1))]"
-      />
-      <span className="text-foreground truncate font-medium">{name}</span>
-    </div>
-  );
-};
-
 const UserMessage: FC = () => {
   const [editing, setEditing] = useState(false);
   return (
@@ -1547,7 +1393,6 @@ const UserMessage: FC = () => {
           </div>
         ) : (
           <>
-            <UserPersonaAvatar />
             <UserMessageAttachments />
 
             <div className="aui-user-message-content peer bg-bubble-user text-foreground col-start-2 row-start-3 max-w-full rounded-2xl px-4 py-2.5 wrap-break-word empty:hidden">

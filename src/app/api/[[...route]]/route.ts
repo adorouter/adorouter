@@ -40,6 +40,19 @@ const PUBLIC_READ_TTL: { match: (p: string) => boolean; ttl: number }[] = [
 ];
 
 export const app = new Elysia({ prefix: "/api" })
+  // A plain chat only sends messages and names conversations. The rest includes an
+  // open relay, image tools, web search and a reply buffer, so it stays closed.
+  .onRequest(({ request, set }) => {
+    const path = new URL(request.url).pathname;
+    if (
+      !path.startsWith("/api/ai/") ||
+      path === "/api/ai/chat/title" ||
+      path === "/api/ai/chat/forward/chat/completions"
+    )
+      return;
+    set.status = 404;
+    return { success: false, message: "Not found" };
+  })
   .use(
     openapi({
       path: "/openapi",

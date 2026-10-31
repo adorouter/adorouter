@@ -38,7 +38,7 @@ export const THIRTY_DAY_CACHE = {
 } as const;
 
 // providerOptions under any other key are silently discarded.
-export const CHAT_PROVIDER_NAME = "unorouter";
+export const CHAT_PROVIDER_NAME = "adorouter";
 
 export const NEW_API_USER = "New-Api-User";
 export const SECURITY_PROOF_HEADER = "X-Security-Proof";
@@ -114,7 +114,7 @@ export const ORPG_VERSION = "orpg.3.0";
 
 type LocaleCode = Uppercase<DashToUnderscore<(typeof LOCALES)[number]>>;
 
-export const LANGUAGES: {
+const ALL_LANGUAGES: {
   code: LocaleCode;
   locale: Locale;
   Flag: FunctionComponent<SVGAttributes<SVGElement>>;
@@ -139,6 +139,11 @@ export const LANGUAGES: {
   { code: "ZH_CN", locale: "zh-CN", Flag: CN, ogLocale: "zh-CN" },
   { code: "ZH_TW", locale: "zh-TW", Flag: TW, ogLocale: "zh-TW" },
 ];
+
+// adorouter is English only at launch.
+export const LANGUAGES = ALL_LANGUAGES.filter(
+  (language) => language.locale === "en",
+);
 
 export const msg = <T extends TranslationKey>(key: T): T => key;
 

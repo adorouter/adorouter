@@ -30,16 +30,6 @@ export function buildMcpServerCard(t: Translator) {
       type: "webmcp",
       webmcp: { homepage: env.siteOrigin },
     },
-    // Installable stdio server, published in the official MCP registry.
-    registryName: "com.unorouter/mcp",
-    packages: [
-      {
-        registryType: "npm",
-        identifier: "unorouter-mcp",
-        transport: { type: "stdio" },
-        repository: "https://github.com/unorouter/unorouter-mcp",
-      },
-    ],
     capabilities: { tools: {} },
     tools,
   };

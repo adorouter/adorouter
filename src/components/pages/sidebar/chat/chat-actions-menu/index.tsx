@@ -27,7 +27,6 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { AppearanceSubmenu } from "./appearance-submenu";
-import { RpNavItems } from "./rp-nav-items";
 import { RequestLogListSheet } from "../request-log/request-log-list-sheet";
 import { ToolsSubmenu } from "./tools-submenu";
 
@@ -81,20 +80,6 @@ export function ChatActionsMenu(props: Props) {
             <Icon name="settings-2" className="size-4" />
             {t("CHAT.OVERRIDES.OPEN")}
           </DropdownMenuItem>
-          {props.convId && (
-            <DropdownMenuItem
-              onClick={() => {
-                setFocusMemory(true);
-                setSettingsOpen(true);
-              }}
-            >
-              <Icon name="scroll-text" className="size-4" />
-              {t("CHAT.MORE.AUTHOR_NOTE")}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          {/* Library: priority, flat + top-level. */}
-          <RpNavItems />
           <DropdownMenuSeparator />
           {/* Everything else grouped: look-and-feel + utilities. */}
           <AppearanceSubmenu onOpenCustomizer={() => setThemeOpen(true)} />
