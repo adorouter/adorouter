@@ -9,7 +9,7 @@ import { Form } from "@/components/ui/form";
 import { GlassAuthCard } from "@/components/ui/glass-auth-card";
 import { useLoginMutation } from "@/hooks/auth/auth-hook";
 import { useStatusQuery } from "@/hooks/ops/status-hook";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { RouterPush } from "@/i18n/routing";
 import {
   APP_VALUES,
@@ -204,6 +204,14 @@ export function LoginForm() {
                   placeholder={t("AUTH.FORM.PASSWORD_PLACEHOLDER")}
                   className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
                 />
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-muted-foreground hover:text-foreground text-xs hover:underline"
+                  >
+                    {t("AUTH.FORGOT_PASSWORD.LINK")}
+                  </Link>
+                </div>
               </div>
 
               {statusQuery.data?.turnstile_check &&
@@ -270,6 +278,16 @@ export function LoginForm() {
             {formError}
           </p>
         )}
+
+        <p className="text-muted-foreground text-center text-sm">
+          {t("AUTH.DONT_HAVE_ACCOUNT")}{" "}
+          <Link
+            href="/register"
+            className="text-foreground font-medium hover:underline"
+          >
+            {t("AUTH.REGISTER.BUTTON")}
+          </Link>
+        </p>
       </div>
     </GlassAuthCard>
   );

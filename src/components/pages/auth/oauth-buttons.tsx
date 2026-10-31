@@ -51,7 +51,7 @@ export function buildOAuthAuthorizeUrl(
     case "github":
       return `https://github.com/login/oauth/authorize?client_id=${status.github_client_id}&state=${state}&scope=user:email&redirect_uri=${encodedRedirect}`;
     case "discord":
-      return `https://discord.com/api/oauth2/authorize?client_id=${status.discord_client_id}&state=${state}&response_type=code&scope=identify+email+guilds.members.read&redirect_uri=${encodedRedirect}`;
+      return `https://discord.com/api/oauth2/authorize?client_id=${status.discord_client_id}&state=${state}&response_type=code&scope=identify+email&redirect_uri=${encodedRedirect}`;
     case "google":
       return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${status.google_client_id}&state=${state}&response_type=code&scope=openid+email+profile&redirect_uri=${encodedRedirect}`;
     case "oidc":
