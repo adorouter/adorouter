@@ -67,9 +67,9 @@ export default async function Page(props: {
       </HydrationBoundary>
 
       {data.vendorNames.length > 0 && (
-        <section className="border-border/50 border-t px-4 py-8 md:px-6">
-          <div className="mx-auto w-full max-w-360">
-            <h2 className="text-muted-foreground mb-4 text-sm font-bold tracking-wider uppercase">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6">
+          <div className="border-border border-t pt-8">
+            <h2 className="text-foreground mb-4 text-lg font-semibold">
               {t("MODELS.VENDOR.BROWSE_ALL")}
             </h2>
             <ul className="flex flex-wrap gap-2">
@@ -83,9 +83,9 @@ export default async function Page(props: {
                         params: { slug: [vendorSlug(vendor)] },
                       }}
                       prefetch={false}
-                      className="text-muted-foreground hover:text-foreground hover:border-foreground/30 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors"
+                      className="text-foreground/80 hover:text-foreground hover:border-foreground/40 border-border inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors"
                     >
-                      <VendorIcon vendor={vendor} size={14} />
+                      <VendorIcon vendor={vendor} size={16} />
                       {vendor}
                     </Link>
                   </li>

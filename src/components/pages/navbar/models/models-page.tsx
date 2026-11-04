@@ -1,32 +1,24 @@
 "use client";
 
-import { DataTable } from "@/components/elements/table/data-table";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { useModelsFilter } from "@/hooks/ui/use-models-hook";
-import { ModelsUrlSync } from "./models-url-sync";
-import { DataTableId } from "@/lib/types/enums";
-import { createTableAtoms } from "@/store/data-table-store";
 import {
-  activeFilterCountAtom,
-  clearFiltersAtom,
-  isDirtyAtom,
-} from "@/store/models-store";
+  countByOutputModality,
+  OUTPUT_MODALITIES,
+  type OutputModality,
+} from "@/lib/api/model-modality";
+import { msg } from "@/lib/config/constants";
+import { cn } from "@/lib/utils";
+import { clearFiltersAtom, isDirtyAtom } from "@/store/models-store";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
-import { buildModelColumns } from "./browse/model-columns";
-import { ModelListCard } from "./browse/model-list-card";
+import { ModelGridCard } from "./browse/model-grid-card";
 import { ModelsEmpty } from "./browse/models-empty";
-import { ModelsToolbar, SearchBox } from "./browse/models-toolbar";
-import { ModalityTabs } from "./filters/modality-tabs";
-import { ModelsFilterSidebar } from "./filters/models-filter-sidebar";
+import { SearchBox } from "./browse/models-toolbar";
+import { ModelsUrlSync } from "./models-url-sync";
 
 // Static import chained recharts (PerformanceSection) into the initial models
-// bundle; the sheet only renders after a row click.
+// bundle; the sheet only renders after a card click.
 const ModelDetailSheet = dynamic(
   () =>
     import("./detail/model-detail-sheet").then((m) => ({
@@ -35,102 +27,89 @@ const ModelDetailSheet = dynamic(
   { ssr: false },
 );
 
-const modelsTableAtoms = createTableAtoms(DataTableId.MODELS);
+const MODALITY_LABEL_KEY = {
+  all: msg("MODELS.MODALITY.ALL"),
+  text: msg("MODELS.MODALITY.TEXT"),
+  image: msg("MODELS.MODALITY.IMAGE"),
+  audio: msg("MODELS.MODALITY.AUDIO"),
+  video: msg("MODELS.MODALITY.VIDEO"),
+  embeddings: msg("MODELS.MODALITY.EMBEDDINGS"),
+  decisions: msg("MODELS.MODALITY.DECISIONS"),
+} satisfies Record<OutputModality, ReturnType<typeof msg>>;
 
+// A header, modality chips and a card grid, rather than unorouter's filter
+// sidebar and table. With a small catalog the sidebar's filters sat empty.
 export function ModelsPage() {
   const t = useTranslations();
   const m = useModelsFilter();
   const clearFilters = useSetAtom(clearFiltersAtom);
   const isDirty = useAtomValue(isDirtyAtom);
-  const activeFilterCount = useAtomValue(activeFilterCountAtom);
-  const columnSorting = useAtomValue(modelsTableAtoms.sortingAtom);
-  const setColumnSorting = useSetAtom(modelsTableAtoms.sortingAtom);
-  const showReset = isDirty || columnSorting.length > 0;
 
-  const openDetail = (name: string) => {
-    m.setSelectedModelName(name);
-  };
-
-  function resetAll() {
-    clearFilters();
-    setColumnSorting([]);
-  }
-
-  const columns = buildModelColumns({
-    rankMap: m.rankMap,
-    offLabel: (pct) => t("MODELS.TABLE.OFF", { pct }),
-    freeLabel: t("MODELS.TABLE.FREE"),
-    flatNoParamsLabel: t("MODELS.TABLE.FLAT_NO_PARAMS"),
-  });
+  const counts = countByOutputModality(m.tabModels);
+  const chips = OUTPUT_MODALITIES.filter(
+    (modality) =>
+      modality === "all" ||
+      counts[modality] > 0 ||
+      m.outputModality === modality,
+  );
 
   return (
-    <div className="w-full pt-20 pb-16">
+    <div className="mx-auto w-full max-w-7xl px-4 pt-20 pb-16 sm:px-6">
       <ModelsUrlSync />
-      <SidebarProvider
-        defaultOpen
-        className="relative h-auto min-h-0 overflow-visible"
-        style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
-      >
-        <ModelsFilterSidebar models={m.models} />
 
-        <SidebarInset className="@container max-h-none! min-w-0 overflow-visible bg-transparent px-4 md:px-6">
-          <ModelsToolbar
-            showReset={showReset}
-            activeFilterCount={activeFilterCount}
-            onReset={resetAll}
+      <header className="flex flex-col gap-6 pt-6 md:flex-row md:items-end md:justify-between">
+        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+          Models
+        </h1>
+        <SearchBox className="relative w-full md:w-80" />
+      </header>
+
+      {chips.length > 1 && (
+        <div className="mt-8 flex flex-wrap gap-2">
+          {chips.map((modality) => {
+            const active = m.outputModality === modality;
+            return (
+              <button
+                key={modality}
+                type="button"
+                aria-pressed={active}
+                onClick={() => m.setOutputModality(modality)}
+                className={cn(
+                  "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border text-foreground/80 hover:border-foreground/40",
+                )}
+              >
+                {t(MODALITY_LABEL_KEY[modality])}
+                <span className="ml-1.5 opacity-60">
+                  {modality === "all" ? m.tabModels.length : counts[modality]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-8">
+        {m.filtered.length === 0 ? (
+          <ModelsEmpty
+            filtered={isDirty}
+            count={isDirty ? 1 : 0}
+            onReset={clearFilters}
           />
-
-          {/* Tabs + table header stick together as one unit under the navbar
-              so the column labels stay flush below the tab row. h pinned: a
-              transient hydration reflow inside the tab strip briefly grew this
-              row 24px and shifted everything below (CLS). */}
-          <div className="scroll-surface sticky top-14 z-20 flex h-9.75 items-center gap-2 overflow-hidden">
-            <SidebarTrigger
-              aria-label={t("MODELS.FILTER.TITLE")}
-              className="size-8 shrink-0 border"
-            />
-            <ModalityTabs
-              models={m.tabModels}
-              value={m.outputModality}
-              onChange={(value) => m.setOutputModality(value)}
-            />
-          </div>
-
-          <SearchBox className="relative mt-3 w-full lg:hidden" />
-
-          {/* min-h reserves the virtualized table's space pre-hydration; the
-              window virtualizer renders no rows at SSR, so without it the
-              footer starts in-viewport and hydration shoves it down (CLS). */}
-          <div className="mt-4 min-h-svh">
-            {m.filtered.length === 0 ? (
-              <ModelsEmpty
-                filtered={showReset}
-                count={activeFilterCount}
-                onReset={resetAll}
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {m.filtered.map((model) => (
+              <ModelGridCard
+                key={model.model_name}
+                model={model}
+                onOpen={() => m.setSelectedModelName(model.model_name)}
               />
-            ) : m.viewMode === "table" ? (
-              <DataTable
-                id={DataTableId.MODELS}
-                data={m.filtered}
-                columns={columns}
-                localSorting
-                windowVirtual
-                stickyHeaderTop="calc(3.5rem + 2.4375rem)"
-                onRowClick={(model) => openDetail(model.model_name)}
-              />
-            ) : (
-              m.filtered.map((model) => (
-                <ModelListCard
-                  key={model.model_name}
-                  model={model}
-                  rank={m.rankMap.get(model.model_name)}
-                  onClick={() => openDetail(model.model_name)}
-                />
-              ))
-            )}
+            ))}
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        )}
+      </div>
 
       <ModelDetailSheet
         model={m.selectedModel}
