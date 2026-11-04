@@ -2580,7 +2580,7 @@
       "DESCRIPTION": "Legal notice for {appName}: contact details and consumer disputes.",
       "KEYWORDS": "legal notice, {appName}, contact"
     },
-    "INTRO": "How to contact {appDomain}.",
+    "INTRO": "How to contact {appName}, and where to turn if we cannot resolve a complaint.",
     "PROVIDER_TITLE": "Provider",
     "PROVIDER_CONTENT": "{legalName}, trading as {appName}\n{legalAddress}",
     "CONTACT_TITLE": "Contact",
