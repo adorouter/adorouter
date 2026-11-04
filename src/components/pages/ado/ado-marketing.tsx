@@ -92,7 +92,6 @@ export function AdoPricing() {
             "Top up any amount from $5. Credits are shown in dollars and don't expire.",
             "Each request costs the provider's list price plus our margin, based on the input and output tokens it uses.",
             "Some providers charge less at off-peak times, so the same request can cost different amounts at different times.",
-            "Discord accounts that meet the requirements get a small one-time credit to try it out.",
             "Any tax due is worked out at checkout, based on where you are.",
           ]}
         />
