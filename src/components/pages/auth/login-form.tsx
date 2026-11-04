@@ -192,7 +192,7 @@ export function LoginForm() {
                       ? t("AUTH.FORM.USERNAME_OR_EMAIL_PLACEHOLDER")
                       : t("AUTH.FORM.USERNAME_PLACEHOLDER")
                   }
-                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                  className="border-border bg-background h-11 rounded-xl px-4"
                 />
                 <MyFormInput
                   control={form.control}
@@ -202,7 +202,7 @@ export function LoginForm() {
                   type="password"
                   autoComplete="current-password"
                   placeholder={t("AUTH.FORM.PASSWORD_PLACEHOLDER")}
-                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                  className="border-border bg-background h-11 rounded-xl px-4"
                 />
                 <div className="flex justify-end">
                   <Link
@@ -238,7 +238,7 @@ export function LoginForm() {
                   loginMutation.isPending ||
                   (statusQuery.data?.turnstile_check && !turnstileToken)
                 }
-                className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+                className="h-11 w-full rounded-full text-[15px] font-semibold"
               >
                 {loginMutation.isPending
                   ? t("AUTH.LOGGING_IN")

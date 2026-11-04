@@ -2707,14 +2707,14 @@
   },
   "AUTH": {
     "LOGIN": {
-      "TITLE": "Welcome Back",
-      "DESCRIPTION": "Sign in to your {appName} account",
-      "BUTTON": "Sign In"
+      "TITLE": "Log in",
+      "DESCRIPTION": "Welcome back to {appName}.",
+      "BUTTON": "Log in"
     },
     "REGISTER": {
-      "TITLE": "Create Account",
-      "DESCRIPTION": "Get started with {appName}",
-      "BUTTON": "Create Account"
+      "TITLE": "Create your account",
+      "DESCRIPTION": "Sign up with your email or one of the accounts below.",
+      "BUTTON": "Create account"
     },
     "FORM": {
       "USERNAME": "Username",

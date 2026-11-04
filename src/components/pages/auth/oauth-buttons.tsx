@@ -174,7 +174,7 @@ export function OAuthButtons(props: OAuthButtonsProps) {
     <div className="space-y-4">
       <div className="relative flex items-center gap-4">
         <div className="bg-border/60 h-px flex-1" />
-        <span className="text-muted-foreground text-xs tracking-wider uppercase">
+        <span className="text-muted-foreground text-sm">
           {t("AUTH.OR_CONTINUE_WITH")}
         </span>
         <div className="bg-border/60 h-px flex-1" />
@@ -188,7 +188,7 @@ export function OAuthButtons(props: OAuthButtonsProps) {
             key={provider.key}
             onClick={() => handleOAuth(provider)}
             disabled={loading !== null || awaitingTurnstile}
-            className="border-border/60 bg-background/60 hover:bg-accent text-foreground flex h-11 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-medium transition-colors disabled:opacity-50"
+            className="border-border/60 bg-background/60 hover:bg-accent text-foreground flex h-11 w-full items-center justify-center gap-2 rounded-full border text-[15px] font-medium transition-colors disabled:opacity-50"
           >
             {loading === provider.key ? (
               <span className="text-muted-foreground text-xs">...</span>

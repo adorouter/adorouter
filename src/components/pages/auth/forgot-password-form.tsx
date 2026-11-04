@@ -85,7 +85,7 @@ export function ForgotPasswordForm() {
                 type="email"
                 autoComplete="email"
                 placeholder={t("AUTH.FORM.EMAIL_PLACEHOLDER")}
-                className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                className="border-border bg-background h-11 rounded-xl px-4"
               />
 
               {statusQuery.data?.turnstile_check &&
@@ -113,7 +113,7 @@ export function ForgotPasswordForm() {
                   resetMutation.isPending ||
                   (statusQuery.data?.turnstile_check && !turnstileToken)
                 }
-                className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+                className="h-11 w-full rounded-full text-[15px] font-semibold"
               >
                 {resetMutation.isPending
                   ? t("AUTH.FORGOT_PASSWORD.SENDING")

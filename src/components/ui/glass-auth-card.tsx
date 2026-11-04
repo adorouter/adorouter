@@ -8,23 +8,22 @@ interface GlassAuthCardProps {
   description?: ReactNode;
 }
 
+// No card or glass: the auth layout already frames the form, so this is just a
+// left-aligned heading above it.
 export function GlassAuthCard(props: GlassAuthCardProps) {
   return (
-    <div
-      className={cn(
-        "border-border/60 bg-card/85 animate-fade-in relative w-full max-w-md overflow-hidden rounded-3xl border p-8 backdrop-blur-xl sm:p-10",
-        props.className,
-      )}
-    >
+    <div className={cn("animate-fade-in w-full max-w-sm", props.className)}>
       {(props.title || props.description) && (
-        <div className="mb-8 space-y-2 text-center">
+        <div className="mb-8 space-y-2">
           {props.title && (
-            <h1 className="text-foreground text-2xl font-semibold sm:text-3xl">
+            <h1 className="text-foreground text-3xl font-bold tracking-tight">
               {props.title}
             </h1>
           )}
           {props.description && (
-            <p className="text-muted-foreground text-sm">{props.description}</p>
+            <p className="text-muted-foreground text-base">
+              {props.description}
+            </p>
           )}
         </div>
       )}

@@ -167,7 +167,7 @@ export function RegisterForm() {
                     type="text"
                     autoComplete="username"
                     placeholder={t("AUTH.FORM.USERNAME_PLACEHOLDER")}
-                    className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                    className="border-border bg-background h-11 rounded-xl px-4"
                   />
                 )}
 
@@ -181,7 +181,7 @@ export function RegisterForm() {
                       type="email"
                       autoComplete="email"
                       placeholder={t("AUTH.FORM.EMAIL_PLACEHOLDER")}
-                      className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                      className="border-border bg-background h-11 rounded-xl px-4"
                     />
                     {verificationMutation.error && (
                       <p className="text-destructive text-xs font-medium">
@@ -199,7 +199,7 @@ export function RegisterForm() {
                   type="password"
                   autoComplete="new-password"
                   placeholder={t("AUTH.FORM.PASSWORD_PLACEHOLDER")}
-                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                  className="border-border bg-background h-11 rounded-xl px-4"
                 />
 
                 {status?.email_verification && (
@@ -218,7 +218,7 @@ export function RegisterForm() {
                           placeholder={t(
                             "AUTH.FORM.VERIFICATION_CODE_PLACEHOLDER",
                           )}
-                          className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                          className="border-border bg-background h-11 rounded-xl px-4"
                         />
                       </div>
                       <Button
@@ -245,7 +245,7 @@ export function RegisterForm() {
                   type="text"
                   autoComplete="off"
                   placeholder={t("AUTH.FORM.AFF_CODE_PLACEHOLDER")}
-                  className="border-border/60 bg-background/60 h-11 rounded-2xl px-4"
+                  className="border-border bg-background h-11 rounded-xl px-4"
                 />
               </div>
 
@@ -270,7 +270,7 @@ export function RegisterForm() {
               <Button
                 type="submit"
                 disabled={submitDisabled}
-                className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+                className="h-11 w-full rounded-full text-[15px] font-semibold"
               >
                 {registerMutation.isPending
                   ? t("AUTH.REGISTERING")

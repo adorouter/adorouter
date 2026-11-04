@@ -66,7 +66,7 @@ export function ResetPasswordForm(props: Props) {
               href="/login"
               className={cn(
                 buttonVariants(),
-                "h-11 w-full font-mono text-xs font-bold tracking-widest uppercase",
+                "h-11 w-full rounded-full text-[15px] font-semibold",
               )}
             >
               {t("AUTH.RESET_PASSWORD.GO_TO_LOGIN")}
@@ -87,7 +87,7 @@ export function ResetPasswordForm(props: Props) {
             <Button
               onClick={onConfirm}
               disabled={resetMutation.isPending}
-              className="h-11 w-full font-mono text-xs font-bold tracking-widest uppercase"
+              className="h-11 w-full rounded-full text-[15px] font-semibold"
             >
               {resetMutation.isPending
                 ? t("AUTH.RESET_PASSWORD.RESETTING")
