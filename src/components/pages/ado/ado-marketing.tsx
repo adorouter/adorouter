@@ -52,7 +52,7 @@ export function AdoHome() {
         <div>
           <h2 className="text-lg font-semibold">Pay as you go</h2>
           <p className="text-foreground/70 mt-2 leading-relaxed">
-            No subscription. Credits you buy don&apos;t expire.
+            Top up from $1. Credits you buy never expire.
           </p>
         </div>
         <div>
@@ -77,51 +77,6 @@ export function AdoHome() {
         <AdoCode>{chatExample(env.apiUrl)}</AdoCode>
       </div>
     </main>
-  );
-}
-
-export function AdoPricing() {
-  return (
-    <AdoPage
-      title="Pricing"
-      intro="Prepaid credits, no subscription. You pay for the tokens each request uses."
-    >
-      <AdoSection title="How it works">
-        <AdoList
-          items={[
-            "Top up any amount from $1. Credits are shown in dollars and don't expire.",
-            "Top-ups under $5 have a $0.50 fee, shown before you pay.",
-            "Each request costs the provider's list price plus our margin, based on the input and output tokens it uses.",
-            "Some providers charge less at off-peak times, so the same request can cost different amounts at different times.",
-            "Any tax due is worked out at checkout, based on where you are.",
-          ]}
-        />
-      </AdoSection>
-      <AdoSection title="Model prices">
-        <p>
-          Every model&apos;s current price is on the{" "}
-          <Link href="/models" className="text-primary hover:underline">
-            Models page
-          </Link>
-          .
-        </p>
-      </AdoSection>
-      <AdoSection title="Refunds">
-        <p>
-          Credit purchases are non-refundable, except where the law requires a
-          refund or we made a mistake. See the{" "}
-          <Link href="/refund" className="text-primary hover:underline">
-            Refund Policy
-          </Link>
-          .
-        </p>
-      </AdoSection>
-      <div>
-        <Button nativeButton={false} render={<Link href="/billing" />}>
-          Top up credits
-        </Button>
-      </div>
-    </AdoPage>
   );
 }
 
