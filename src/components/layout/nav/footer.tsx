@@ -1,184 +1,142 @@
 "use client";
 
-import { CompanyName, LogoImage } from "@/components/elements/brand/brand";
+import { LogoImage } from "@/components/elements/brand/brand";
 import { Icon } from "@/components/ui/icon";
 import { Link } from "@/i18n/navigation";
-import { APP_VALUES, msg } from "@/lib/config/constants";
+import type { LinkHref } from "@/i18n/routing";
+import { APP_VALUES, msg, type TranslationKey } from "@/lib/config/constants";
 import { env } from "@/lib/config/env";
-import { cn } from "@/lib/utils";
+import type { IconName } from "@/lib/config/icon-map";
 import { dayjs } from "@/lib/utils/format/date";
 import { useTranslations } from "next-intl";
 import NextLink from "next/link";
-import { usePathname } from "next/navigation";
-import { isActiveLink } from "./navigation";
 
-const NAV_LINKS = [
-  { href: "/models", key: msg("FOOTER.MODELS") },
-  { href: "/pricing", key: msg("FOOTER.PRICING") },
-  { href: "/docs", key: msg("FOOTER.DOCUMENTATION") },
-] as const;
+type FooterLink =
+  | { label: TranslationKey; href: LinkHref }
+  | { text: string; href: LinkHref }
+  | { text: string; external: string };
 
-const LEGAL_LINKS = [
-  { href: "/terms", key: msg("FOOTER.TERMS") },
-  { href: "/privacy", key: msg("FOOTER.PRIVACY") },
-  { href: "/consents", key: msg("FOOTER.CONSENTS") },
-  { href: "/aup", key: msg("FOOTER.AUP") },
-  { href: "/refund", key: msg("FOOTER.REFUND") },
-  { href: "/impressum", key: msg("FOOTER.IMPRESSUM") },
-] as const;
+// Labels without a translation key are plain English: only en is served.
+const COLUMNS: { title: string; links: FooterLink[] }[] = [
+  {
+    title: "Product",
+    links: [
+      { label: msg("FOOTER.MODELS"), href: "/models" },
+      { label: msg("FOOTER.PRICING"), href: "/pricing" },
+      { text: "Chat", href: "/chat" },
+      { label: msg("FOOTER.STATUS"), href: "/status" },
+    ],
+  },
+  {
+    title: "Developers",
+    links: [
+      { label: msg("FOOTER.DOCUMENTATION"), href: "/docs" },
+      { text: "API keys", href: "/token" },
+      ...(env.githubUrl
+        ? [{ text: "Source code", external: env.githubUrl }]
+        : []),
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: msg("FOOTER.TERMS"), href: "/terms" },
+      { label: msg("FOOTER.PRIVACY"), href: "/privacy" },
+      { label: msg("FOOTER.CONSENTS"), href: "/consents" },
+      { label: msg("FOOTER.AUP"), href: "/aup" },
+      { label: msg("FOOTER.REFUND"), href: "/refund" },
+      { label: msg("FOOTER.IMPRESSUM"), href: "/impressum" },
+    ],
+  },
+  {
+    title: "Contact",
+    links: [
+      { text: env.supportEmail ?? "", external: `mailto:${env.supportEmail}` },
+      ...(env.discordUrl
+        ? [{ text: "Discord", external: env.discordUrl }]
+        : []),
+    ],
+  },
+];
 
-function FooterLinks(props: {
-  links: typeof NAV_LINKS | typeof LEGAL_LINKS;
-  pathname: string;
-}) {
+const SOCIALS: { href?: string; icon: IconName; label: string }[] = [
+  { href: env.githubUrl, icon: "brand-github", label: "GitHub" },
+  { href: env.discordUrl, icon: "brand-discord", label: "Discord" },
+  { href: env.twitterUrl, icon: "brand-x-twitter", label: "X" },
+  { href: env.redditUrl, icon: "brand-reddit", label: "Reddit" },
+  { href: env.youtubeUrl, icon: "brand-youtube", label: "YouTube" },
+];
+
+const linkClass =
+  "text-primary-foreground text-base font-medium [overflow-wrap:anywhere] transition-opacity hover:opacity-70 sm:[overflow-wrap:normal]";
+
+function FooterItem(props: { link: FooterLink }) {
   const t = useTranslations();
+  const { link } = props;
+  if ("external" in link) {
+    return (
+      <NextLink
+        href={link.external}
+        target={link.external.startsWith("mailto:") ? undefined : "_blank"}
+        rel="noopener noreferrer"
+        className={linkClass}
+      >
+        {link.text}
+      </NextLink>
+    );
+  }
   return (
-    <>
-      {props.links.map((item) => (
-        <li key={item.key}>
-          <Link
-            href={item.href}
-            className={cn(
-              "text-foreground/70 hover:text-foreground transition-colors",
-              isActiveLink(props.pathname, item.href) &&
-                "text-primary font-medium",
-            )}
-          >
-            {t(item.key)}
-          </Link>
-        </li>
-      ))}
-    </>
+    <Link href={link.href} className={linkClass}>
+      {"label" in link ? t(link.label) : link.text}
+    </Link>
   );
 }
 
+// A full-bleed block in the brand colour with a large logo tile, after
+// Browserbase's footer, rather than unorouter's rounded, glowing one.
 export function Footer() {
   const t = useTranslations();
-  const pathname = usePathname();
-
-  const socialLinks = [
-    {
-      id: "github",
-      href: env.githubUrl,
-      icon: "brand-github",
-      label: "GitHub",
-    },
-    {
-      id: "discord",
-      href: env.discordUrl,
-      icon: "brand-discord",
-      label: "Discord",
-    },
-    { id: "x", href: env.twitterUrl, icon: "brand-x-twitter", label: "X" },
-    {
-      id: "trustpilot",
-      href: env.trustpilotUrl,
-      icon: "brand-trustpilot",
-      label: "Trustpilot",
-    },
-    {
-      id: "reddit",
-      href: env.redditUrl,
-      icon: "brand-reddit",
-      label: "Reddit",
-    },
-    {
-      id: "telegram",
-      href: env.telegramUrl,
-      icon: "brand-telegram",
-      label: "Telegram",
-    },
-    {
-      id: "youtube",
-      href: env.youtubeUrl,
-      icon: "brand-youtube",
-      label: "YouTube",
-    },
-    {
-      id: "instagram",
-      href: env.instagramUrl,
-      icon: "brand-instagram",
-      label: "Instagram",
-    },
-  ] as const;
 
   return (
-    <footer className="bg-footer relative overflow-hidden rounded-t-3xl border-t md:rounded-t-[4rem]">
-      <div className="absolute inset-0 -z-10">
-        <div className="bg-primary/30 dark:bg-primary/10 absolute bottom-0 left-0 h-64 w-64 rounded-full blur-3xl"></div>
-        <div className="bg-primary/30 dark:bg-primary/10 absolute top-1/4 right-0 h-72 w-72 rounded-full blur-3xl"></div>
-      </div>
-      <div className="mx-auto max-w-6xl px-5 pt-16 pb-8">
-        <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-5">
-          <div className="col-span-1 text-center md:col-span-2 md:text-left">
-            <div className="mb-4 flex items-center justify-center gap-2 md:justify-start">
-              <LogoImage alt="" />
-              <CompanyName className="text-2xl" />
-            </div>
-            <p className="text-foreground/70 mx-auto mb-6 max-w-md md:mx-0">
+    <footer className="bg-primary text-primary-foreground">
+      <div className="mx-auto max-w-7xl px-4 pt-20 pb-10 sm:px-6 md:pt-24">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)]">
+          <div className="flex flex-col gap-5">
+            <LogoImage
+              alt=""
+              width={180}
+              className="hidden rounded-[2.5rem] md:block"
+            />
+            <LogoImage alt="" width={88} className="rounded-2xl md:hidden" />
+            <span className="text-4xl font-bold tracking-tight md:text-5xl">
+              {APP_VALUES.appName}
+            </span>
+            <p className="max-w-xs text-base opacity-80">
               {t("FOOTER.DESCRIPTION")}
             </p>
-            <div className="flex justify-center space-x-3 md:justify-start">
-              {socialLinks.map(
-                (social) =>
-                  social.href && (
-                    <NextLink
-                      key={social.id}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-background hover:bg-muted rounded-full p-2 transition-colors"
-                      aria-label={social.label}
-                    >
-                      <Icon name={social.icon} className="h-5 w-5" />
-                    </NextLink>
-                  ),
-              )}
-            </div>
           </div>
 
-          <div className="col-span-1 flex justify-center gap-8 md:contents">
-            <div className="text-center md:col-span-1 md:text-left">
-              <h2 className="mb-4 font-semibold">{t("FOOTER.PRODUCT")}</h2>
-              <ul className="space-y-2">
-                <FooterLinks links={NAV_LINKS} pathname={pathname} />
-                <li>
-                  <Link
-                    href="/status"
-                    className="text-foreground/70 hover:text-foreground transition-colors"
-                  >
-                    {t("FOOTER.STATUS")}
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div className="text-center md:col-span-1 md:text-left">
-              <h2 className="mb-4 font-semibold">{t("FOOTER.LEGAL")}</h2>
-              <ul className="space-y-2">
-                <FooterLinks links={LEGAL_LINKS} pathname={pathname} />
-              </ul>
-            </div>
-          </div>
-
-          <div className="col-span-1 text-center md:text-left">
-            <h2 className="mb-4 font-semibold">{t("FOOTER.CONTACT_TITLE")}</h2>
-            <div className="text-foreground/70 space-y-2 text-sm">
-              <p>{t("FOOTER.CONTACT_SUBTITLE")}</p>
-              <NextLink
-                href={`mailto:${env.supportEmail}`}
-                className="text-primary hover:underline"
-              >
-                {env.supportEmail}
-              </NextLink>
-            </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
+            {COLUMNS.map((column) => (
+              <div key={column.title}>
+                <h2 className="mb-3 font-mono text-xs tracking-widest uppercase opacity-70">
+                  {column.title}
+                </h2>
+                <ul className="space-y-2">
+                  {column.links.map((link) => (
+                    <li key={"text" in link ? link.text : link.label}>
+                      <FooterItem link={link} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="border-muted/50 relative border-t pt-8">
-          <div className="via-primary/70 absolute top-0 left-1/2 h-px w-1/2 -translate-x-1/2 bg-linear-to-r from-transparent to-transparent"></div>
-          <div className="text-foreground/70 relative flex flex-col items-center justify-center gap-2 text-sm">
-            <p className="text-center" suppressHydrationWarning>
+        <div className="border-primary-foreground/20 mt-16 flex flex-col gap-4 border-t pt-6 text-sm md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1 opacity-80">
+            <p suppressHydrationWarning>
               {t("FOOTER.COPYRIGHT", {
                 year:
                   (process.env.NEXT_PUBLIC_BUILD_DATE ?? "").slice(0, 4) ||
@@ -187,26 +145,34 @@ export function Footer() {
               })}
             </p>
             {/* Required by the AGPL Section 7 terms in new-api's NOTICE. Keep it. */}
-            <p className="text-center text-xs">
+            <p>
               Frontend design and development by New API contributors.{" "}
               <NextLink
                 href="https://github.com/QuantumNous/new-api"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-foreground underline"
+                className="underline hover:opacity-70"
               >
                 github.com/QuantumNous/new-api
               </NextLink>
-              {" · "}
-              <NextLink
-                href="https://github.com/adorouter"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground underline"
-              >
-                Source code
-              </NextLink>
             </p>
+          </div>
+          <div className="flex gap-4">
+            {SOCIALS.map(
+              (social) =>
+                social.href && (
+                  <NextLink
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    className="transition-opacity hover:opacity-70"
+                  >
+                    <Icon name={social.icon} className="size-5" />
+                  </NextLink>
+                ),
+            )}
           </div>
         </div>
       </div>

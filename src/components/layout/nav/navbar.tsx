@@ -1,244 +1,89 @@
 "use client";
 
 import { CompanyName, LogoImage } from "@/components/elements/brand/brand";
-import { LoginLink } from "@/components/elements/brand/login-link";
 import { NotifyBell } from "@/components/elements/notify/notify-bell";
 import { Icon } from "@/components/ui/icon";
 import { LanguageToggle } from "@/components/toggle/language-toggle";
 import { ThemeToggle } from "@/components/toggle/theme-toggle";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import { GuideIcon } from "@/components/pages/docs/guide-icon";
 import { useAuthQuery } from "@/hooks/auth/auth-hook";
 import { useHydrated } from "@/hooks/ui/use-hydrated";
 import { Link, usePathname } from "@/i18n/navigation";
-import { APP_VALUES, type TranslationKey } from "@/lib/config/constants";
 import { env } from "@/lib/config/env";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { Fragment, useRef } from "react";
+import { GuestActions } from "./guest-actions";
 import { MobileNav } from "./mobile-nav";
 import { PrefetchLink } from "./prefetch-link";
-import { isActiveLink, navigation, type NavigationItem } from "./navigation";
+import { isActiveLink, navigation } from "./navigation";
 
+// A solid bar with the logo tile on the left, plain links in the middle and a
+// pill button on the right, instead of unorouter's transparent bar of small
+// uppercase monospace links. It stays 56px tall, which the pt-20 page padding
+// expects.
 export function Navbar(props: { authSlot?: React.ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
   const authQuery = useAuthQuery();
   const hydrated = useHydrated();
-  const navRowRef = useRef<HTMLDivElement>(null);
 
   // Gate on hydrated or the first client render mismatches the logged-out shell.
   const navItems = navigation(hydrated && !!authQuery.data).filter(
     (item) => !item.hidden,
   );
-  const docsItem = navItems.find((item) => item.name === "NAV.DOCS");
-  const dropdownItems = navItems.filter(
-    (item) => item.submenu && item.name !== "NAV.DOCS",
-  );
-  const topLevelItems = navItems.filter((item) => !item.submenu);
-
-  const docsSubmenuGroups: {
-    group: TranslationKey;
-    items: NavigationItem[];
-  }[] = [];
-  for (const link of docsItem?.submenu ?? []) {
-    const key = link.group ?? docsItem!.name;
-    let bucket = docsSubmenuGroups.find((g) => g.group === key);
-    if (!bucket) {
-      bucket = { group: key, items: [] };
-      docsSubmenuGroups.push(bucket);
-    }
-    bucket.items.push(link);
-  }
 
   return (
-    <nav className="navbar-scroll fixed top-0 right-0 left-0 z-50 border-b border-transparent bg-transparent">
-      <div
-        ref={navRowRef}
-        className="mx-auto flex h-14 max-w-360 items-center justify-between px-3 font-mono sm:px-6"
-      >
-        <div className="flex items-center gap-2 lg:hidden">
+    <nav className="bg-header border-border fixed top-0 right-0 left-0 z-50 border-b">
+      <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-3">
           <MobileNav />
           <Link
             href="/"
             prefetch={false}
-            className="group flex items-center gap-2"
+            className="group flex items-center gap-2.5"
           >
-            <LogoImage alt="" />
-            <CompanyName className="text-foreground group-hover:text-muted-foreground text-lg transition-colors" />
+            <LogoImage alt="" width={30} className="rounded-md" />
+            <CompanyName className="text-foreground text-xl font-semibold tracking-tight" />
           </Link>
         </div>
 
-        <Link
-          href="/"
-          prefetch={false}
-          className="group hidden items-center gap-2 lg:flex"
-        >
-          <LogoImage alt="" />
-          <CompanyName className="text-foreground group-hover:text-muted-foreground text-lg transition-colors" />
-        </Link>
-
-        <div className="hidden items-center gap-8 lg:flex">
-          {topLevelItems.map((link) => (
-            <PrefetchLink
-              key={link.name}
-              href={link.href}
-              className={cn(
-                "text-[11px] font-medium tracking-widest uppercase transition-colors",
-                isActiveLink(pathname, link.href, link.exact)
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(link.name)}
-            </PrefetchLink>
-          ))}
-
-          {dropdownItems.map((item) => (
-            <NavigationMenu key={item.name} className="flex-none">
-              <NavigationMenuList>
-                <NavigationMenuItem className="flex items-center">
-                  <NavigationMenuTrigger
-                    nativeButton={false}
-                    className="text-muted-foreground hover:text-foreground h-auto min-h-0 bg-transparent p-0 text-[11px] font-medium tracking-widest uppercase hover:bg-transparent focus:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent data-open:focus:bg-transparent data-popup-open:bg-transparent"
-                    render={<Link href={item.href}>{t(item.name)}</Link>}
-                  />
-                  <NavigationMenuContent>
-                    <ul className="grid w-max min-w-40 gap-0.5 p-1">
-                      {(item.submenu ?? []).map((sub) => (
-                        <li key={sub.name}>
-                          <NavigationMenuLink
-                            render={
-                              <PrefetchLink
-                                href={sub.href}
-                                className="hover:bg-muted/50 focus:bg-muted/50 grid grid-cols-[auto_1fr] items-center gap-x-2.5 rounded-md px-2.5 py-1.5 transition-colors"
-                              >
-                                {sub.iconName ? (
-                                  <Icon
-                                    name={sub.iconName}
-                                    className="text-muted-foreground size-4"
-                                  />
-                                ) : null}
-                                <span className="text-foreground text-[13px] font-medium">
-                                  {t(sub.name)}
-                                </span>
-                              </PrefetchLink>
-                            }
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-          ))}
-
-          {docsItem && (
-            <NavigationMenu
-              className="flex-none"
-              anchor={navRowRef}
-              align="center"
-              collisionAvoidance={{ side: "none", align: "shift" }}
-            >
-              <NavigationMenuList>
-                <NavigationMenuItem className="flex items-center">
-                  <NavigationMenuTrigger
-                    nativeButton={false}
-                    className="text-muted-foreground hover:text-foreground h-auto min-h-0 bg-transparent p-0 text-[11px] font-medium tracking-widest uppercase hover:bg-transparent focus:bg-transparent data-open:bg-transparent data-open:hover:bg-transparent data-open:focus:bg-transparent data-popup-open:bg-transparent"
-                    render={
-                      <Link href={docsItem.href}>{t(docsItem.name)}</Link>
-                    }
-                  />
-                  <NavigationMenuContent>
-                    <div className="grid w-[min(92vw,1080px)] grid-cols-2 gap-2 p-1 md:grid-cols-3 lg:grid-cols-4">
-                      {docsSubmenuGroups.map((grp) => (
-                        <Fragment key={grp.group}>
-                          <span
-                            className="text-muted-foreground/60 col-span-full px-1 pt-2 pb-1 font-mono text-[10px] tracking-[0.15em] uppercase first:pt-0"
-                            aria-hidden="true"
-                          >
-                            {t(grp.group)}
-                          </span>
-                          {grp.items.map((link) => (
-                            <NavigationMenuLink
-                              key={link.name}
-                              render={
-                                <PrefetchLink
-                                  href={link.href}
-                                  className="border-border/60 bg-card/40 hover:border-primary/40 hover:bg-muted/50 grid grid-cols-[auto_1fr] items-center gap-x-2.5 gap-y-0.5 rounded-md border px-3 py-2 transition-colors"
-                                >
-                                  <span className="row-span-2 flex size-5 shrink-0 items-center justify-center self-center">
-                                    {link.guideIcon ? (
-                                      <GuideIcon
-                                        iconKey={link.guideIcon.iconKey}
-                                        logoSrc={link.guideIcon.logoSrc}
-                                        logoBg={link.guideIcon.logoBg}
-                                        logoMono={link.guideIcon.logoMono}
-                                        size={18}
-                                      />
-                                    ) : link.iconName ? (
-                                      <Icon
-                                        name={link.iconName}
-                                        className="size-4"
-                                      />
-                                    ) : link.iconComponent ? (
-                                      <link.iconComponent className="size-4" />
-                                    ) : null}
-                                  </span>
-                                  <span className="text-foreground truncate text-[13px] font-semibold">
-                                    {t(link.name, APP_VALUES)}
-                                  </span>
-                                  {link.subtitle && (
-                                    <span className="text-muted-foreground col-start-2 truncate text-[11px] leading-snug">
-                                      {t(link.subtitle, APP_VALUES)}
-                                    </span>
-                                  )}
-                                </PrefetchLink>
-                              }
-                            />
-                          ))}
-                        </Fragment>
-                      ))}
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-          )}
+        <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex">
+          {navItems.map((link) => {
+            const active = isActiveLink(pathname, link.href, link.exact);
+            return (
+              <PrefetchLink
+                key={link.name}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "text-[15px] font-medium transition-colors",
+                  active
+                    ? "text-primary"
+                    : "text-foreground/80 hover:text-foreground",
+                )}
+              >
+                {t(link.name)}
+              </PrefetchLink>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1 sm:gap-2">
           {env.discordUrl && (
             <a
               href={env.discordUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("NAV.DISCORD")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-foreground/70 hover:text-foreground hidden p-1.5 transition-colors sm:block"
             >
-              <Icon name="brand-discord" className="h-5 w-5" />
+              <Icon name="brand-discord" className="h-[18px] w-[18px]" />
             </a>
           )}
           <NotifyBell />
           <LanguageToggle />
           <ThemeToggle />
-          {props.authSlot ?? (
-            <LoginLink
-              aria-label={t("NAV.LOG_IN")}
-              className="text-muted-foreground hover:text-foreground text-[11px] font-bold tracking-wider uppercase transition-colors"
-            >
-              <Icon name="log-in" className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline">{t("NAV.LOG_IN")}</span>
-            </LoginLink>
-          )}
+          <span className="bg-border mx-1 hidden h-5 w-px sm:block" />
+          {props.authSlot ?? <GuestActions />}
         </div>
       </div>
     </nav>

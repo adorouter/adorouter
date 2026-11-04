@@ -45,7 +45,7 @@ export function MobileNav() {
         <Icon name="menu" className="h-5 w-5" />
         <span className="sr-only">{t("NAV.MENU")}</span>
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-80 flex-col font-mono">
+      <SheetContent side="left" className="flex w-80 flex-col">
         <SheetHeader>
           <SheetTitle>
             <Link
@@ -80,7 +80,7 @@ export function MobileNav() {
                   href={item.href}
                   onClick={handleNavigate}
                   className={cn(
-                    "hover:bg-foreground/5 flex items-center gap-2 rounded-md px-3 py-2 text-sm tracking-wider uppercase transition-colors",
+                    "hover:bg-foreground/5 flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -104,7 +104,7 @@ export function MobileNav() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleNavigate}
-              className="border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 mt-2 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium tracking-wider uppercase transition-colors"
+              className="border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 mt-2 flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
             >
               <Icon name="brand-discord" className="h-4 w-4" />
               {t("NAV.DISCORD")}
@@ -140,7 +140,7 @@ function CollapsibleNavItem(props: {
           href={props.item.href}
           onClick={props.onNavigate}
           className={cn(
-            "hover:bg-foreground/5 flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-sm tracking-wider uppercase transition-colors",
+            "hover:bg-foreground/5 flex flex-1 items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors",
             isActive
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground",
@@ -197,7 +197,7 @@ function CollapsibleNavItem(props: {
                     href={subItem.href}
                     onClick={props.onNavigate}
                     className={cn(
-                      "hover:bg-foreground/5 flex items-center gap-2 rounded-md px-3 py-2 text-sm tracking-wider uppercase transition-colors",
+                      "hover:bg-foreground/5 flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors",
                       isSubActive
                         ? "text-foreground"
                         : "text-muted-foreground hover:text-foreground",
