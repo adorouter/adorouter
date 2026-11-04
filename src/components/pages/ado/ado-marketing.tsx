@@ -89,7 +89,8 @@ export function AdoPricing() {
       <AdoSection title="How it works">
         <AdoList
           items={[
-            "Top up any amount from $5. Credits are shown in dollars and don't expire.",
+            "Top up any amount from $1. Credits are shown in dollars and don't expire.",
+            "Top-ups under $5 have a $0.50 fee, shown before you pay.",
             "Each request costs the provider's list price plus our margin, based on the input and output tokens it uses.",
             "Some providers charge less at off-peak times, so the same request can cost different amounts at different times.",
             "Any tax due is worked out at checkout, based on where you are.",
