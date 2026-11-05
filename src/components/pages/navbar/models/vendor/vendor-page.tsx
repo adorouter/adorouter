@@ -1,15 +1,15 @@
 "use client";
 
 import { VendorIcon } from "@/components/elements/brand/vendor-icon";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
-import { Link } from "@/i18n/navigation";
 import { usePricingVendorQuery } from "@/hooks/models/pricing-hook";
+import { Link } from "@/i18n/navigation";
 import { vendorDisplayName } from "@/lib/api/pricing";
 import { vendorSlug } from "@/lib/utils/base";
 import { useTranslations } from "next-intl";
-import { VendorModelCard } from "./vendor-model-card";
+import { ModelGridCard } from "../browse/model-grid-card";
 
+// AdoRouter: same header and cards as the Models page, so a vendor page reads
+// as a filtered view of it rather than unorouter's own vendor layout.
 export function VendorModelsPage(props: { vendor: string }) {
   const t = useTranslations();
   const query = usePricingVendorQuery(props.vendor);
@@ -27,65 +27,69 @@ export function VendorModelsPage(props: { vendor: string }) {
   const display = vendorDisplayName(props.vendor);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pt-20 pb-16 md:px-6">
-      <div className="mb-6 flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          nativeButton={false}
-          render={<Link href="/models" />}
-        >
-          <Icon name="arrow-left" className="h-5 w-5" />
-        </Button>
-        <VendorIcon vendor={props.vendor} size={32} />
-        <h1 className="text-xl font-semibold tracking-tight">{display}</h1>
-        <span className="text-muted-foreground text-sm">
-          {t("MODELS.VENDOR.N_MODELS", { count: models.length })}
-        </span>
-      </div>
+    <div className="mx-auto w-full max-w-7xl px-4 pt-28 pb-16 sm:px-6">
+      <nav className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Link href="/models" className="hover:text-foreground">
+          Models
+        </Link>
+        <span aria-hidden>/</span>
+        <span className="text-foreground">{display}</span>
+      </nav>
 
-      {models.length === 0 ? (
-        query.isPending ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="border-border/50 bg-muted/20 h-28 animate-pulse rounded-lg border"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground py-16 text-center text-sm">
-            {t("MODELS.VENDOR.EMPTY")}
-          </p>
-        )
-      ) : (
-        <>
-          {live.length > 0 && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {live.map((model) => (
-                <VendorModelCard key={model.model_name} model={model} />
+      <header className="mt-6 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="flex items-center gap-3 text-4xl font-bold tracking-tight md:text-5xl">
+          <VendorIcon vendor={props.vendor} size={40} />
+          {display}
+        </h1>
+        <p className="text-muted-foreground">
+          {models.length === 1 ? "1 model" : `${models.length} models`}
+        </p>
+      </header>
+
+      <div className="mt-10">
+        {models.length === 0 ? (
+          query.isPending ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="border-border bg-card h-56 animate-pulse rounded-2xl border"
+                />
               ))}
             </div>
-          )}
-
-          {busy.length > 0 && (
-            <section className={live.length > 0 ? "mt-10" : undefined}>
-              <h2 className="text-muted-foreground mb-1 text-sm font-bold tracking-wider uppercase">
-                {t("MODELS.VENDOR.AT_CAPACITY_HEADING")}
-              </h2>
-              <p className="text-muted-foreground mb-4 text-sm">
-                {t("MODELS.VENDOR.AT_CAPACITY_NOTE")}
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {busy.map((model) => (
-                  <VendorModelCard key={model.model_name} model={model} />
+          ) : (
+            <p className="border-border text-muted-foreground rounded-2xl border border-dashed p-6">
+              {t("MODELS.VENDOR.EMPTY")}
+            </p>
+          )
+        ) : (
+          <>
+            {live.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {live.map((model) => (
+                  <ModelGridCard key={model.model_name} model={model} link />
                 ))}
               </div>
-            </section>
-          )}
-        </>
-      )}
+            )}
+
+            {busy.length > 0 && (
+              <section className={live.length > 0 ? "mt-14" : undefined}>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  At capacity
+                </h2>
+                <p className="text-muted-foreground mt-1 mb-5">
+                  {t("MODELS.VENDOR.AT_CAPACITY_NOTE")}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {busy.map((model) => (
+                    <ModelGridCard key={model.model_name} model={model} link />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -3,19 +3,25 @@ import { ApiKeyCodeBlock } from "@/components/elements/code/api-key-code-block";
 import { highlightCode } from "@/components/elements/code/code-block";
 import { CopyButton } from "@/components/elements/code/copy-button";
 import { VendorIcon } from "@/components/elements/brand/vendor-icon";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Link } from "@/i18n/navigation";
-import { findContextTag, findSimilarModels } from "@/lib/api/pricing";
+import {
+  findContextTag,
+  findSimilarModels,
+  vendorDisplayName,
+} from "@/lib/api/pricing";
 import type { PricingCatalogModel } from "@/openapi";
 import type { ModelDetailData } from "@/lib/validation/data-policy";
 import { APP_VALUES } from "@/lib/config/constants";
 import { getVendorTheme } from "@/lib/config/vendor-registry";
 import { modelHref } from "@/lib/utils/base";
-import { discountPercent, formatPrice } from "@/lib/utils/format/number";
+import {
+  discountPercent,
+  formatPrice,
+  formatTokenCount,
+} from "@/lib/utils/format/number";
 import { formatMsDate, formatYearMonth } from "@/lib/utils/format/date";
-import { cn } from "@/lib/utils";
 import { getDocsApiKey } from "@/lib/api/page-data";
 import { usesInputsForOwnPurposes } from "@/lib/api/own-purpose";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -28,11 +34,9 @@ import { CodeExamplesTabs } from "./tabs/code-examples-tabs";
 import { GridPricingTable } from "./pricing/grid-pricing-table";
 import { GroupPricingSection } from "./pricing/group-pricing-section";
 import { hasAnyParameter } from "./header/capability-helpers";
-import { ModelBreadcrumb } from "./header/model-breadcrumb";
 import { BenchmarksSection } from "./tabs/benchmarks-section";
 import { SectionHeading } from "./shared/section-heading";
 import { ModelRankingSection } from "./tabs/model-ranking-section";
-import { ModelTabs } from "./tabs/model-tabs";
 import { PerfUptimePanel } from "./tabs/perf-uptime-panel";
 import { SupportedParameters } from "./tabs/supported-parameters";
 import { TryInChatButton } from "./header/try-in-chat-button";
@@ -143,218 +147,209 @@ print(res.choices[0].message.content)`;
     highlightCode(tsExample, "typescript"),
     highlightCode(pyExample, "python"),
   ]);
-
   const theme = getVendorTheme(m.vendor);
-  const endpointsDisplay = (m.supported_endpoint_types ?? []).join(", ") || "-";
+  const meta = m.metadata ?? EMPTY_METADATA;
+  const endpoints = m.supported_endpoint_types ?? [];
 
   const released = m.release_ts;
   const releaseDateLabel = released ? formatMsDate(released) : "";
   const lastUpdatedMs = m.created_time ? m.created_time * 1000 : released;
   const lastUpdatedLabel = lastUpdatedMs ? formatMsDate(lastUpdatedMs) : "";
-  const knowledgeCutoff = formatYearMonth(m.metadata?.knowledgeCutoff) ?? "";
-  const hasReleaseRow = Boolean(
-    releaseDateLabel || knowledgeCutoff || lastUpdatedLabel,
-  );
+  const knowledgeCutoff = formatYearMonth(meta.knowledgeCutoff) ?? "";
+  const ctxTokens = meta.contextWindow ?? meta.maxInputTokens;
+  const ctx = ctxTokens ? formatTokenCount(ctxTokens, locale) : contextTag;
+  const maxOut = meta.maxOutputTokens;
+  const similarModels = [...similar.sameVendor, ...similar.sameTag];
 
-  const endpointPills = m.supported_endpoint_types ?? [];
+  const fixedUnit =
+    fixedPriceUnitLabel(m) === "second"
+      ? t("MODEL_PAGE.PER_SECOND_UNIT")
+      : fixedPriceUnitLabel(m) === "image"
+        ? t("MODEL_PAGE.PER_IMAGE_UNIT")
+        : t("MODEL_PAGE.PER_REQUEST_UNIT");
 
-  const glow = theme.primary ?? "#94a3b8";
+  const facts: { label: string; value: string }[] = [
+    ctx ? { label: "Context", value: `${ctx} tokens` } : null,
+    maxOut
+      ? {
+          label: "Max output",
+          value: `${formatTokenCount(maxOut, locale)} tokens`,
+        }
+      : null,
+    endpoints.length > 0
+      ? { label: "Endpoints", value: endpoints.join(", ") }
+      : null,
+    releaseDateLabel ? { label: "Released", value: releaseDateLabel } : null,
+    knowledgeCutoff
+      ? { label: "Knowledge cutoff", value: knowledgeCutoff }
+      : null,
+    lastUpdatedLabel ? { label: "Updated", value: lastUpdatedLabel } : null,
+  ].filter((f) => f !== null);
 
+  // AdoRouter layout: a plain header, then one column of sections beside a
+  // sticky panel with the price and the facts a caller needs. unorouter's
+  // version used a vendor-tinted glow and Overview / API / Benchmarks tabs.
   return (
-    <div className="relative mx-auto max-w-5xl px-6 pt-20 pb-16">
-      {/* Full-bleed vendor-tinted glow at the top, matching the rankings/tester
-          pages. Escapes the max-w container via w-screen + centered translate. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-0 left-1/2 -z-10 h-150 w-screen -translate-x-1/2 opacity-25 dark:opacity-[0.12]"
-        style={{
-          background: [
-            `radial-gradient(ellipse 45% 45% at 20% 12%, color-mix(in oklab, ${glow} 80%, transparent) 0%, transparent 70%)`,
-            `radial-gradient(ellipse 40% 40% at 78% 10%, color-mix(in oklab, ${glow} 55%, transparent) 0%, transparent 70%)`,
-            `radial-gradient(ellipse 35% 35% at 50% 50%, color-mix(in oklab, ${glow} 35%, transparent) 0%, transparent 70%)`,
-          ].join(", "),
-          maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, black 40%, transparent 100%)",
-        }}
-      />
-      <ModelBreadcrumb
-        vendorName={m.vendor}
-        vendorHref={props.vendorHref}
-        modelName={m.model_name}
-      />
-      <section className="pt-8 pb-6">
-        {/* Mobile: chat action rides above the title so the name has full width. */}
-        <div className="mb-4 flex gap-2 sm:hidden">
+    <div className="mx-auto w-full max-w-6xl px-5 pt-28 pb-20">
+      <nav className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+        <Link href="/models" className="hover:text-foreground">
+          Models
+        </Link>
+        <span aria-hidden>/</span>
+        <a href={props.vendorHref} className="hover:text-foreground">
+          {vendorDisplayName(m.vendor)}
+        </a>
+      </nav>
+
+      <header className="mt-6 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <VendorIcon vendor={m.icon ?? m.vendor} size={20} />
+            <span>{m.vendor}</span>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <h1 className="min-w-0 font-mono text-3xl font-bold tracking-tight break-all md:text-5xl">
+              {m.model_name}
+            </h1>
+            <CopyButton
+              text={m.model_name}
+              toastMessage="Model ID copied"
+              className="text-muted-foreground hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-full transition-colors"
+            />
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <TryInChatButton
             modelName={m.model_name}
-            label={t("MODEL_PAGE.OPEN_CHAT")}
-            loginLabel={t("MODEL_PAGE.OPEN_CHAT")}
+            label="Try in chat"
+            loginLabel="Try in chat"
             icon
-            badge
             disabled={props.offline}
           />
           <WatchModelButton modelName={m.model_name} />
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className={cn(
-                "flex size-12 shrink-0 items-center justify-center rounded-xl border",
-                theme.bg,
-                theme.border,
+      </header>
+
+      {m.description && (
+        <div className="text-foreground/80 mt-6 max-w-3xl text-lg">
+          <ModelDescription text={m.description} />
+        </div>
+      )}
+
+      <div className="mt-6 space-y-3">
+        <ModelHeaderChips metadata={meta} locale={locale} />
+        <ModelMetaStats metadata={meta} />
+      </div>
+
+      {props.offline && <AtCapacityBanner />}
+      {usesInputsForOwnPurposes(m) && <OwnPurposeNotice />}
+
+      <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <aside className="lg:order-last">
+          <div className="border-border bg-card rounded-2xl border p-6 lg:sticky lg:top-24">
+            <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              Price
+            </p>
+            <div className="mt-4 space-y-4">
+              {m.is_fixed_price ? (
+                <PriceLine
+                  label={t("MODEL_PAGE.FIXED_PRICE")}
+                  value={m.fixed_price}
+                  original={m.original_fixed_price ?? null}
+                  unit={fixedUnit}
+                />
+              ) : (
+                <>
+                  <PriceLine
+                    label="Input"
+                    value={m.input_price}
+                    original={m.original_input_price ?? null}
+                    unit={t("MODEL_PAGE.PER_MILLION_UNIT")}
+                  />
+                  <PriceLine
+                    label="Output"
+                    value={m.output_price}
+                    original={m.original_output_price ?? null}
+                    unit={t("MODEL_PAGE.PER_MILLION_UNIT")}
+                  />
+                </>
               )}
-            >
-              <VendorIcon vendor={m.icon ?? m.vendor} size={28} />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight wrap-break-word sm:text-3xl">
-                <span className={cn("font-normal", theme.text)}>
-                  {m.vendor}
-                </span>
-                <span className="text-muted-foreground">: </span>
-                {m.model_name}
-              </h1>
-              <div className="text-muted-foreground mt-1 flex items-center gap-1 font-mono text-xs">
-                <span className="break-all">{m.model_name}</span>
+
+            {facts.length > 0 && (
+              <dl className="border-border mt-6 space-y-3 border-t pt-5 text-sm">
+                {facts.map((f) => (
+                  <div key={f.label} className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">{f.label}</dt>
+                    <dd className="text-right font-medium break-all">
+                      {f.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            <div className="border-border mt-6 border-t pt-5">
+              <p className="text-muted-foreground text-sm">Base URL</p>
+              <div className="mt-1 flex items-center gap-1">
+                <code className="min-w-0 truncate font-mono text-sm">
+                  {`${docs.apiUrl}/v1`}
+                </code>
                 <CopyButton
-                  text={m.model_name}
-                  className="text-muted-foreground hover:text-foreground flex size-5 shrink-0 items-center justify-center transition-colors"
-                  iconSize="h-3 w-3"
+                  text={`${docs.apiUrl}/v1`}
+                  toastMessage="Base URL copied"
+                  className="text-muted-foreground hover:text-foreground flex size-7 shrink-0 items-center justify-center rounded-full transition-colors"
                 />
               </div>
             </div>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <TryInChatButton
-              modelName={m.model_name}
-              label={t("MODEL_PAGE.OPEN_CHAT")}
-              loginLabel={t("MODEL_PAGE.OPEN_CHAT")}
-              icon
-              badge
-              disabled={props.offline}
+        </aside>
+
+        <div className="min-w-0 space-y-14">
+          <section>
+            <SectionHeading theme={theme} className="mb-1">
+              Call it from your code
+            </SectionHeading>
+            <p className="text-muted-foreground mb-4">
+              {t("MODEL_PAGE.CODE_DESC", APP_VALUES)}
+            </p>
+            <CodeExamplesTabs
+              curl={
+                <ApiKeyCodeBlock
+                  html={curlHtml}
+                  code={curlExample}
+                  language="bash"
+                  placeholder={docs.placeholder}
+                />
+              }
+              typescript={
+                <ApiKeyCodeBlock
+                  html={tsHtml}
+                  code={tsExample}
+                  language="typescript"
+                  placeholder={docs.placeholder}
+                />
+              }
+              python={
+                <ApiKeyCodeBlock
+                  html={pyHtml}
+                  code={pyExample}
+                  language="python"
+                  placeholder={docs.placeholder}
+                />
+              }
             />
-            <WatchModelButton modelName={m.model_name} />
-          </div>
-        </div>
+          </section>
 
-        <div className="mt-4">
-          <ModelHeaderChips
-            metadata={m.metadata ?? EMPTY_METADATA}
-            locale={locale}
-          />
-        </div>
-
-        {hasReleaseRow && (
-          <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs">
-            {releaseDateLabel && (
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="calendar" className="h-3 w-3" />
-                {t("MODEL_PAGE.RELEASE_DATE")} {releaseDateLabel}
-              </span>
-            )}
-            {knowledgeCutoff && (
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="clock" className="h-3 w-3" />
-                {t("MODEL_PAGE.KNOWLEDGE_CUTOFF")} {knowledgeCutoff}
-              </span>
-            )}
-            {lastUpdatedLabel && (
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="refresh-cw" className="h-3 w-3" />
-                {t("MODEL_PAGE.LAST_UPDATED")} {lastUpdatedLabel}
-              </span>
-            )}
-          </div>
-        )}
-
-        {m.description && (
-          <div className="mt-4">
-            <ModelDescription text={m.description} />
-          </div>
-        )}
-
-        <div className="mt-4">
-          <ModelMetaStats metadata={m.metadata ?? EMPTY_METADATA} />
-        </div>
-
-        {props.offline && <AtCapacityBanner />}
-        {usesInputsForOwnPurposes(m) && <OwnPurposeNotice />}
-      </section>
-
-      <ModelTabs
-        overview={
-          <>
-            <section className="mt-12">
-              <SectionHeading theme={theme}>
-                {t("MODEL_PAGE.PRICING_TITLE")}
-              </SectionHeading>
-              <div className="flex flex-wrap items-stretch gap-2">
-                {m.is_fixed_price ? (
-                  <PriceCell
-                    label={t("MODEL_PAGE.FIXED_PRICE")}
-                    value={m.fixed_price}
-                    original={m.original_fixed_price ?? null}
-                    unit={
-                      fixedPriceUnitLabel(m) === "second"
-                        ? t("MODEL_PAGE.PER_SECOND_UNIT")
-                        : fixedPriceUnitLabel(m) === "image"
-                          ? t("MODEL_PAGE.PER_IMAGE_UNIT")
-                          : t("MODEL_PAGE.PER_REQUEST_UNIT")
-                    }
-                    offLabel={(pct) => t("MODELS.TABLE.OFF", { pct })}
-                    theme={theme}
-                  />
-                ) : (
-                  <>
-                    <PriceCell
-                      label={t("MODEL_PAGE.INPUT_PRICE")}
-                      value={m.input_price}
-                      original={m.original_input_price ?? null}
-                      unit={t("MODEL_PAGE.PER_MILLION_UNIT")}
-                      offLabel={(pct) => t("MODELS.TABLE.OFF", { pct })}
-                      theme={theme}
-                    />
-                    <PriceCell
-                      label={t("MODEL_PAGE.OUTPUT_PRICE")}
-                      value={m.output_price}
-                      original={m.original_output_price ?? null}
-                      unit={t("MODEL_PAGE.PER_MILLION_UNIT")}
-                      offLabel={(pct) => t("MODELS.TABLE.OFF", { pct })}
-                      theme={theme}
-                    />
-                  </>
-                )}
-              </div>
-              <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px]">
-                {contextTag && (
-                  <span>
-                    {t("MODEL_PAGE.CONTEXT_WINDOW")}{" "}
-                    <span className="text-foreground/80">
-                      {t("MODEL_PAGE.CONTEXT_TOKENS", { count: contextTag })}
-                    </span>
-                  </span>
-                )}
-                <span>
-                  {t("MODEL_PAGE.ENDPOINTS")}{" "}
-                  <span className="text-foreground/80">{endpointsDisplay}</span>
-                </span>
-                <span>
-                  {t("MODEL_PAGE.VENDOR")}{" "}
-                  <span className="text-foreground/80">{m.vendor}</span>
-                </span>
-              </div>
+          {(m.grid_pricing || (m.enable_groups.length > 0 && !m.is_tiered)) && (
+            <section>
+              <SectionHeading theme={theme}>Pricing details</SectionHeading>
               {m.grid_pricing && (
-                <div className="mt-6">
-                  <h3 className="mb-3 text-sm font-semibold">
-                    {t("MODEL_PAGE.GRID_PRICING_TITLE")}
-                  </h3>
-                  <GridPricingTable
-                    rows={m.grid_pricing}
-                    priceLabel={t("MODEL_PAGE.GRID_PRICE_HEADER")}
-                    multiplier={m.grid_min_ratio}
-                  />
-                </div>
+                <GridPricingTable
+                  rows={m.grid_pricing}
+                  priceLabel={t("MODEL_PAGE.GRID_PRICE_HEADER")}
+                  multiplier={m.grid_min_ratio}
+                />
               )}
               {m.enable_groups.length > 0 && !m.is_tiered && (
                 <GroupPricingSection
@@ -365,227 +360,104 @@ print(res.choices[0].message.content)`;
                 />
               )}
             </section>
+          )}
 
+          <div className="[&>section]:mt-0 [&>section+section]:mt-14">
             <PerfUptimePanel modelName={m.model_name} theme={theme} />
+          </div>
 
-            <section className="mt-12">
-              <ModelRankingSection
-                modelName={m.model_name}
-                vendorName={m.vendor}
-              />
-            </section>
+          <section>
+            <ModelRankingSection
+              modelName={m.model_name}
+              vendorName={m.vendor}
+            />
+          </section>
 
-            {hasAnyParameter(m.metadata ?? EMPTY_METADATA) && (
-              <section className="mt-12">
-                <SectionHeading theme={theme}>
-                  {t("MODELS.DETAIL.SUPPORTED_PARAMETERS")}
-                </SectionHeading>
-                <div
-                  className={cn(
-                    "overflow-hidden rounded-lg border",
-                    theme.border,
-                    theme.bg,
-                  )}
-                >
-                  <SupportedParameters
-                    metadata={m.metadata ?? EMPTY_METADATA}
-                  />
-                </div>
-              </section>
-            )}
-
-            <section className="mt-12">
-              <ModelFaq model={m} />
-            </section>
-
-            {(similar.sameVendor.length > 0 || similar.sameTag.length > 0) && (
-              <section className="mt-12">
-                <SectionHeading theme={theme}>
-                  {t("MODEL_PAGE.SIMILAR_TITLE")}
-                </SectionHeading>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {[...similar.sameVendor, ...similar.sameTag].map((sim) => {
-                    const simTheme = getVendorTheme(sim.vendor);
-                    return (
-                      <Link
-                        key={sim.model_name}
-                        href={modelHref(sim.model_name, sim.vendor)}
-                        prefetch={false}
-                        className={cn(
-                          "group flex items-center gap-3 rounded-lg border p-4 transition-all hover:-translate-y-0.5",
-                          simTheme.bg,
-                          simTheme.border,
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex size-10 shrink-0 items-center justify-center rounded-md border",
-                            simTheme.tagBg,
-                            simTheme.tagBorder,
-                          )}
-                        >
-                          <VendorIcon
-                            vendor={sim.icon ?? sim.vendor}
-                            size={24}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">
-                            {sim.model_name}
-                          </div>
-                          <div
-                            className={cn(
-                              "truncate font-mono text-[10px] tracking-wider uppercase",
-                              simTheme.text,
-                            )}
-                          >
-                            {sim.vendor}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </>
-        }
-        api={
-          <>
-            <section className="mt-12">
+          {hasAnyParameter(meta) && (
+            <section>
               <SectionHeading theme={theme}>
-                {t("MODEL_PAGE.BASE_URL")}
+                {t("MODELS.DETAIL.SUPPORTED_PARAMETERS")}
               </SectionHeading>
-              <div
-                className={cn(
-                  "flex items-center gap-2 overflow-x-auto rounded-lg border px-4 py-3 font-mono text-sm",
-                  theme.border,
-                  theme.bg,
-                )}
-              >
-                <Icon
-                  name="link"
-                  className={cn("h-4 w-4 shrink-0", theme.text)}
-                />
-                <code className="whitespace-nowrap">{`${docs.apiUrl}/v1`}</code>
+              <div className="border-border overflow-hidden rounded-2xl border">
+                <SupportedParameters metadata={meta} />
               </div>
             </section>
+          )}
 
-            <section className="mt-12">
-              <SectionHeading theme={theme} className="mb-1">
-                {t("MODEL_PAGE.CODE_TITLE", { name: m.model_name })}
-              </SectionHeading>
-              <p className="text-muted-foreground mb-3 text-sm">
-                {t("MODEL_PAGE.CODE_DESC", APP_VALUES)}
-              </p>
-              <CodeExamplesTabs
-                curl={
-                  <ApiKeyCodeBlock
-                    html={curlHtml}
-                    code={curlExample}
-                    language="bash"
-                    placeholder={docs.placeholder}
-                  />
-                }
-                typescript={
-                  <ApiKeyCodeBlock
-                    html={tsHtml}
-                    code={tsExample}
-                    language="typescript"
-                    placeholder={docs.placeholder}
-                  />
-                }
-                python={
-                  <ApiKeyCodeBlock
-                    html={pyHtml}
-                    code={pyExample}
-                    language="python"
-                    placeholder={docs.placeholder}
-                  />
-                }
-              />
-            </section>
-
-            <section className="mt-12">
-              <SectionHeading theme={theme}>
-                {t("MODEL_PAGE.AVAILABLE_ENDPOINTS")}
-              </SectionHeading>
-              {endpointPills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {endpointPills.map((ep: string) => (
-                    <Badge
-                      key={ep}
-                      variant="outline"
-                      className={cn(
-                        "font-mono text-xs",
-                        theme.tagBg,
-                        theme.tagBorder,
-                        theme.text,
-                      )}
-                    >
-                      {ep}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-muted-foreground font-mono text-sm">
-                  {endpointsDisplay}
-                </span>
-              )}
-              <div className="mt-8">
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  render={<Link href="/docs" />}
-                >
-                  <Icon name="file-text" className="h-4 w-4" />
-                  {t("MODEL_PAGE.VIEW_DOCS")}
-                </Button>
-              </div>
-            </section>
-          </>
-        }
-        benchmarks={
-          <section className="mt-12">
+          <section>
             <BenchmarksSection modelName={m.model_name} vendorName={m.vendor} />
           </section>
-        }
-      />
+
+          <section>
+            <ModelFaq model={m} />
+          </section>
+
+          {similarModels.length > 0 && (
+            <section>
+              <SectionHeading theme={theme}>
+                {t("MODEL_PAGE.SIMILAR_TITLE")}
+              </SectionHeading>
+              <ul className="border-border divide-border divide-y rounded-2xl border">
+                {similarModels.map((sim) => (
+                  <li key={sim.model_name}>
+                    <Link
+                      href={modelHref(sim.model_name, sim.vendor)}
+                      prefetch={false}
+                      className="hover:bg-muted/40 flex items-center gap-3 px-5 py-4 transition-colors"
+                    >
+                      <VendorIcon vendor={sim.icon ?? sim.vendor} size={20} />
+                      <span className="min-w-0 flex-1 truncate font-mono font-semibold">
+                        {sim.model_name}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {sim.vendor}
+                      </span>
+                      <Icon
+                        name="arrow-right"
+                        className="text-muted-foreground h-4 w-4"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/docs" />}
+          >
+            <Icon name="file-text" className="h-4 w-4" />
+            {t("MODEL_PAGE.VIEW_DOCS")}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
 
-type Theme = ReturnType<typeof getVendorTheme>;
-
-function PriceCell(props: {
+function PriceLine(props: {
   label: string;
   value: number;
   original: number | null;
   unit: string;
-  offLabel: (pct: number) => string;
-  theme: Theme;
 }) {
   const pct = discountPercent(props.value, props.original);
   return (
-    <div className="border-border bg-muted/20 min-w-36 flex-1 rounded-md border px-3 py-2.5">
-      <div className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
-        {props.label}
-      </div>
-      <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-        <span
-          className={cn("font-mono text-lg font-semibold", props.theme.text)}
-        >
+    <div>
+      <p className="text-muted-foreground text-sm">{props.label}</p>
+      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-3xl font-bold tracking-tight tabular-nums">
           {formatPrice(props.value)}
         </span>
-        <span className="text-muted-foreground font-mono text-[11px]">
-          {props.unit}
-        </span>
+        <span className="text-muted-foreground text-sm">{props.unit}</span>
         {pct > 0 && props.original !== null && (
-          <span className="rounded bg-green-500/15 px-1 font-mono text-[10px] text-green-600 dark:text-green-400">
-            {props.offLabel(pct)}
+          <span className="bg-primary/15 text-primary rounded-full px-2 py-0.5 text-xs font-semibold">
+            {pct}% off
           </span>
         )}
-      </div>
+      </p>
     </div>
   );
 }

@@ -9,7 +9,9 @@ import {
   modelPriceColumns,
   outputPriceUnit,
 } from "@/lib/api/model-modality";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { modelHref } from "@/lib/utils/base";
 import {
   bestDiscountPercent,
   formatLatency,
@@ -25,6 +27,9 @@ function rateTone(value: number) {
   if (value >= 90) return "text-amber-400";
   return "text-red-400";
 }
+
+const titleClass =
+  "text-foreground min-w-0 truncate text-left font-mono text-lg font-semibold after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none";
 
 function Stat(props: { label: string; value?: string; tone?: string }) {
   return (
@@ -46,13 +51,15 @@ function Stat(props: { label: string; value?: string; tone?: string }) {
   );
 }
 
-// One card per model. The title is a stretched button, so the whole card
-// opens the detail sheet while the copy button keeps its own click.
+// One card per model. The title is a stretched button (or, with `link`, a
+// link to the model page), so the whole card is clickable while the copy
+// button keeps its own click.
 // Success rate and latency come from the last 24 hours of real requests, so a
 // model nobody called yet shows a dash rather than a made-up number.
 export function ModelGridCard(props: {
   model: PricingCatalogModel;
-  onOpen: () => void;
+  onOpen?: () => void;
+  link?: boolean;
 }) {
   const locale = useLocale();
   const model = props.model;
@@ -74,6 +81,11 @@ export function ModelGridCard(props: {
               {discount}% off
             </span>
           )}
+          {model.online === false && (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400">
+              At capacity
+            </span>
+          )}
           {model.is_free && (
             <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-400">
               Free
@@ -83,13 +95,19 @@ export function ModelGridCard(props: {
       </div>
 
       <div className="mt-3 flex items-center gap-1">
-        <button
-          type="button"
-          onClick={props.onOpen}
-          className="text-foreground min-w-0 truncate text-left font-mono text-lg font-semibold after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
-        >
-          {model.model_name}
-        </button>
+        {props.link ? (
+          <Link
+            href={modelHref(model.model_name, model.vendor)}
+            prefetch={false}
+            className={titleClass}
+          >
+            {model.model_name}
+          </Link>
+        ) : (
+          <button type="button" onClick={props.onOpen} className={titleClass}>
+            {model.model_name}
+          </button>
+        )}
         <CopyButton
           text={model.model_name}
           toastMessage="Model ID copied"

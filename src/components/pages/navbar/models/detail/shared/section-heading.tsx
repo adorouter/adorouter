@@ -4,9 +4,10 @@ import type { ReactNode } from "react";
 
 type Theme = ReturnType<typeof getVendorTheme>;
 
-const HEADING = "font-mono text-[10px] tracking-widest uppercase";
+// AdoRouter: plain sentence-case headings instead of unorouter's vendor-tinted
+// mono labels. `theme` is still accepted so the shared sections don't change.
+const HEADING = "text-foreground text-xl font-semibold tracking-tight";
 
-// Shared uppercase mono section label used across every model-detail section.
 // `action` renders a right-aligned slot (period tabs); `icon` a leading glyph.
 export function SectionHeading(props: {
   theme: Theme;
@@ -15,16 +16,14 @@ export function SectionHeading(props: {
   icon?: ReactNode;
   action?: ReactNode;
 }) {
-  const heading = (
-    <h2 className={cn(HEADING, props.theme.text)}>{props.children}</h2>
-  );
+  const heading = <h2 className={HEADING}>{props.children}</h2>;
 
   if (props.action) {
     return (
       <div
         className={cn(
           "flex flex-wrap items-center justify-between gap-2",
-          props.className ?? "mb-3",
+          props.className ?? "mb-4",
         )}
       >
         {heading}
@@ -35,7 +34,7 @@ export function SectionHeading(props: {
 
   if (props.icon) {
     return (
-      <div className={cn("flex items-center gap-2", props.className ?? "mb-3")}>
+      <div className={cn("flex items-center gap-2", props.className ?? "mb-4")}>
         {props.icon}
         {heading}
       </div>
@@ -43,8 +42,6 @@ export function SectionHeading(props: {
   }
 
   return (
-    <h2 className={cn(HEADING, props.className ?? "mb-3", props.theme.text)}>
-      {props.children}
-    </h2>
+    <h2 className={cn(HEADING, props.className ?? "mb-4")}>{props.children}</h2>
   );
 }
