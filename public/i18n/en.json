@@ -1,6 +1,6 @@
 {
   "METADATA": {
-    "TITLE": "{appName} - One Key for Every AI Model",
+    "TITLE": "{appName} · One Key for Every AI Model",
     "DESCRIPTION": "One key for every AI model. Use it in your code, in Claude Code, or in your favorite AI clients. Smart routing across every major provider.",
     "KEYWORDS": "AI API, unified AI endpoint, OpenAI alternative, Claude API, GPT API, Gemini API, DeepSeek API, AI router, AI gateway, multi-model API, OpenAI-compatible API, AI chat client",
     "ACCOUNT": {
@@ -222,7 +222,7 @@
       "DISCORD": "Discord"
     },
     "META": {
-      "TITLE": "{appName} - One Key for Every AI Model",
+      "TITLE": "{appName} · One Key for Every AI Model",
       "DESCRIPTION": "One key for every AI model. Use it in your code, in Claude Code, or in your favorite AI clients. Smart routing across every major provider.",
       "KEYWORDS": "AI API gateway, unified AI endpoint, OpenAI compatible, Claude API, GPT API, Gemini API, automatic failover, smart routing, multi-model API, AI chat client"
     }
@@ -354,7 +354,7 @@
       "TABLE": "Table view"
     },
     "META": {
-      "TITLE": "AI Models - {appName}",
+      "TITLE": "AI Models · {appName}",
       "DESCRIPTION": "The AI models available through AdoRouter, with their current prices.",
       "KEYWORDS": "AI models, model library, AI pricing, GPT models, Claude models, Gemini models, DeepSeek models, AI model comparison, multi-model API, AI chat models"
     },
@@ -437,7 +437,7 @@
       "PRESET_IMAGE": "Image generation",
       "PRESET_IMAGE_DESC": "Top image generation models on cost and quality.",
       "META": {
-        "TITLE": "Compare AI Models - {appName}",
+        "TITLE": "Compare AI Models · {appName}",
         "DESCRIPTION": "Compare AI models side by side by price, context length, capabilities and usage on {appName}.",
         "KEYWORDS": "compare AI models, model comparison, LLM comparison, AI pricing",
         "TITLE_COMBO": "{models} - AI Model Comparison",
@@ -469,7 +469,7 @@
       "COPY_NAME": "Copy model name"
     },
     "VENDOR": {
-      "META_TITLE": "{vendor} models on {appName}",
+      "META_TITLE": "{vendor} models · {appName}",
       "META_DESC": "Browse every {vendor} model available on {appName}: pricing, context, and capabilities.",
       "META_KEYWORDS": "{vendor}, {vendor} models, {vendor} api, {appName}",
       "N_MODELS": "{count} models",
@@ -498,7 +498,7 @@
   },
   "RANKINGS": {
     "META": {
-      "TITLE": "Rankings | {appName}",
+      "TITLE": "Rankings · {appName}",
       "DESCRIPTION": "Discover the most-used AI models and rising vendors on {appName}, ranked by live token volume. Updated continuously from real platform usage.",
       "KEYWORDS": "AI model rankings, LLM leaderboard, top AI models, AI vendor market share, most used AI models, model usage statistics"
     },
@@ -558,10 +558,10 @@
     "DISCORD": "Discuss model performance on Discord"
   },
   "BLOG": {
-    "META_TITLE": "Blog | {appName}",
+    "META_TITLE": "Blog · {appName}",
     "META_DESC": "Product updates, integration guides, and notes from the {appName} team.",
     "META_KEYWORDS": "{appName} blog, AI API news, LLM routing, product updates, integration guides",
-    "POST_META_TITLE": "{title} | {appName}",
+    "POST_META_TITLE": "{title} · {appName}",
     "TITLE": "Blog",
     "SUBTITLE": "Product updates, integration guides, and notes from the team.",
     "READ_MORE": "Read more",
@@ -1330,7 +1330,7 @@
     }
   },
   "MODEL_PAGE": {
-    "META_TITLE": "{name} API pricing, context and examples | {appName}",
+    "META_TITLE": "{name} · {appName}",
     "META_DESC": "Use {name} from {vendor} through a single OpenAI-compatible endpoint. See per-token pricing, context window, endpoints and copy-paste code examples.",
     "META_KEYWORDS": "{name} API, {name} pricing, {name} context window, {vendor} API, {appName}",
     "PRICING_TITLE": "Pricing",
@@ -1444,7 +1444,7 @@
       "RESET_NOTE": "Unused credit does not carry over to the next {period}."
     },
     "META": {
-      "TITLE": "Pricing - {appName}",
+      "TITLE": "Pricing · {appName}",
       "DESCRIPTION": "Simple pricing for every AI model. Subscribe for better value or pay as you go. Works with your code, with Claude Code, and with SillyTavern, RisuAI, and any OpenAI-compatible AI chat client.",
       "KEYWORDS": "AI API pricing, AI subscription, pay per token, AI model pricing, cheap AI API, affordable AI, OpenAI-compatible pricing, multi-model API pricing"
     },
@@ -1492,7 +1492,7 @@
   },
   "DOCS_INDEX": {
     "META": {
-      "TITLE": "Integrations - {appName}",
+      "TITLE": "Integrations · {appName}",
       "DESCRIPTION": "Setup guides for every major AI tool and character chat client. Claude Code, Codex CLI, Gemini CLI, OpenClaw, SillyTavern, RisuAI, and more OpenAI-compatible clients.",
       "KEYWORDS": "AI integration guides, Claude Code setup, Codex CLI setup, Gemini CLI setup, OpenClaw setup, SillyTavern setup, RisuAI setup, AI character chat setup, AI API documentation, OpenAI-compatible API setup"
     },
@@ -1585,7 +1585,7 @@
     "GENERATE_API_KEY_DESC": "Generate an API key to get started",
     "CC_SWITCH": {
       "META": {
-        "TITLE": "CC Switch Integration Guide | {appName}",
+        "TITLE": "CC Switch Integration Guide · {appName}",
         "DESCRIPTION": "Set up CC Switch with {appName} for unified AI CLI management",
         "KEYWORDS": "CC Switch, Claude Code, Codex, Gemini CLI, CLI management"
       },
@@ -1634,7 +1634,7 @@
     },
     "CLAUDE_CODE": {
       "META": {
-        "TITLE": "Claude Code Integration - {appName}",
+        "TITLE": "Claude Code Integration · {appName}",
         "DESCRIPTION": "Use {appName} with Claude Code, Cursor, and any Anthropic-compatible client through one endpoint.",
         "KEYWORDS": "Claude Code, Anthropic API, Claude Code setup, Cursor AI, {appName} Claude, Anthropic alternative"
       },
@@ -1689,7 +1689,7 @@
     },
     "CODEX": {
       "META": {
-        "TITLE": "Codex CLI Setup Guide - {appName}",
+        "TITLE": "Codex CLI Setup Guide · {appName}",
         "DESCRIPTION": "Set up OpenAI Codex CLI with {appName} on Windows, macOS, and Linux, with screenshots.",
         "KEYWORDS": "Codex CLI, OpenAI Codex, Codex setup guide, Codex CLI install, {appName} Codex, OpenAI coding agent"
       },
@@ -1719,7 +1719,7 @@
     },
     "GEMINI_CLI": {
       "META": {
-        "TITLE": "Gemini CLI Integration - {appName}",
+        "TITLE": "Gemini CLI Integration · {appName}",
         "DESCRIPTION": "Use {appName} with the Gemini CLI and any Google GenAI-compatible client.",
         "KEYWORDS": "Gemini CLI, Google AI API, Gemini setup, Google GenAI SDK, {appName} Gemini, Gemini alternative"
       },
@@ -1752,7 +1752,7 @@
     },
     "OPENCLAW": {
       "META": {
-        "TITLE": "OpenClaw Integration - {appName}",
+        "TITLE": "OpenClaw Integration · {appName}",
         "DESCRIPTION": "Use {appName} as the model provider for your OpenClaw agent.",
         "KEYWORDS": "OpenClaw, OpenClaw setup, AI agent, {appName} OpenClaw, model provider, AI gateway"
       },
@@ -1780,7 +1780,7 @@
     },
     "HERMES": {
       "META": {
-        "TITLE": "Hermes Agent Integration - {appName}",
+        "TITLE": "Hermes Agent Integration · {appName}",
         "DESCRIPTION": "Use {appName} as the model provider for Hermes Agent by Nous Research. One OpenAI-compatible endpoint, every model.",
         "KEYWORDS": "Hermes Agent, Nous Research, Hermes setup, AI agent, {appName} Hermes, model provider, OpenAI compatible"
       },
@@ -1812,7 +1812,7 @@
     },
     "MCP": {
       "META": {
-        "TITLE": "MCP Server Setup Guide | {appName}",
+        "TITLE": "MCP Server Setup Guide · {appName}",
         "DESCRIPTION": "Connect any MCP client to {appName} with the adorouter-mcp server. Search the model catalog, check pricing, and chat with any model.",
         "KEYWORDS": "MCP server, Model Context Protocol, adorouter-mcp, {appName} MCP, Claude Desktop MCP, Claude Code MCP, model catalog"
       },
@@ -1834,7 +1834,7 @@
     },
     "SILLYTAVERN": {
       "META": {
-        "TITLE": "SillyTavern Integration Guide | {appName}",
+        "TITLE": "SillyTavern Integration Guide · {appName}",
         "DESCRIPTION": "Connect SillyTavern to {appName} through the Custom OpenAI-compatible chat completion source, with the exact URL format SillyTavern expects.",
         "KEYWORDS": "SillyTavern, SillyTavern proxy, SillyTavern API, SillyTavern custom endpoint, {appName} SillyTavern, AI character chat, OpenAI-compatible API"
       },
@@ -1892,7 +1892,7 @@
     },
     "JANITOR_AI": {
       "META": {
-        "TITLE": "Janitor.AI Integration Guide | {appName}",
+        "TITLE": "Janitor.AI Integration Guide · {appName}",
         "DESCRIPTION": "Connect Janitor.AI to {appName} as a custom proxy, with the exact full-path URL and the browser-refresh step most guides miss.",
         "KEYWORDS": "Janitor AI, Janitor proxy, Janitor API, {appName} Janitor, AI character chat, OpenAI-compatible API, Janitor custom proxy URL"
       },
@@ -1937,7 +1937,7 @@
     },
     "RISUAI": {
       "META": {
-        "TITLE": "RisuAI Integration Guide | {appName}",
+        "TITLE": "RisuAI Integration Guide · {appName}",
         "DESCRIPTION": "Connect RisuAI to {appName} via Custom Models, including unchecking Autofill Request URL, the top support issue for RisuAI proxy setups.",
         "KEYWORDS": "RisuAI, RisuAI proxy, RisuAI custom endpoint, {appName} RisuAI, AI character chat, Autofill Request URL, RisuAI OpenAI-compatible"
       },
@@ -1981,7 +1981,7 @@
     },
     "CHUB": {
       "META": {
-        "TITLE": "Chub / Venus Integration Guide | {appName}",
+        "TITLE": "Chub / Venus Integration Guide · {appName}",
         "DESCRIPTION": "Connect Chub.ai (Venus) to {appName} as a reverse proxy, with a first-party relay disclaimer for Chub''s third-party-proxy warning.",
         "KEYWORDS": "Chub AI, Venus AI, Chub reverse proxy, {appName} Chub, AI character chat, OpenAI-compatible API, Chub OpenAI setup"
       },
@@ -2027,7 +2027,7 @@
     },
     "LIBRECHAT": {
       "META": {
-        "TITLE": "LibreChat Integration Guide | {appName}",
+        "TITLE": "LibreChat Integration Guide · {appName}",
         "DESCRIPTION": "Connect LibreChat to {appName} with a custom OpenAI-compatible endpoint. Add the block to librechat.yaml and set the env var.",
         "KEYWORDS": "LibreChat, LibreChat custom endpoint, LibreChat OpenAI compatible, {appName} LibreChat, self-hosted chat UI"
       },
@@ -2047,7 +2047,7 @@
     },
     "OPEN_WEBUI": {
       "META": {
-        "TITLE": "Open WebUI Integration Guide | {appName}",
+        "TITLE": "Open WebUI Integration Guide · {appName}",
         "DESCRIPTION": "Connect Open WebUI to {appName} as an OpenAI connection in the admin panel. The model picker fills from the catalog.",
         "KEYWORDS": "Open WebUI, Open WebUI OpenAI connection, {appName} Open WebUI, self-hosted ChatGPT UI"
       },
@@ -2068,7 +2068,7 @@
     },
     "LOBECHAT": {
       "META": {
-        "TITLE": "LobeChat Integration Guide | {appName}",
+        "TITLE": "LobeChat Integration Guide · {appName}",
         "DESCRIPTION": "Connect LobeChat to {appName} through Add Custom Provider or Docker env vars.",
         "KEYWORDS": "LobeChat, LobeChat custom provider, {appName} LobeChat, open-source web chat UI"
       },
@@ -2087,7 +2087,7 @@
     },
     "ANYTHINGLLM": {
       "META": {
-        "TITLE": "AnythingLLM Integration Guide | {appName}",
+        "TITLE": "AnythingLLM Integration Guide · {appName}",
         "DESCRIPTION": "Connect AnythingLLM to {appName} as a Generic OpenAI provider. Type the model, set the context window, save.",
         "KEYWORDS": "AnythingLLM, AnythingLLM Generic OpenAI, {appName} AnythingLLM, self-hosted RAG"
       },
@@ -2106,7 +2106,7 @@
     },
     "CHERRY_STUDIO": {
       "META": {
-        "TITLE": "Cherry Studio Integration Guide | {appName}",
+        "TITLE": "Cherry Studio Integration Guide · {appName}",
         "DESCRIPTION": "Connect Cherry Studio to {appName} as an OpenAI provider. Add the host and key, then load your models.",
         "KEYWORDS": "Cherry Studio, Cherry Studio OpenAI provider, {appName} Cherry Studio, cross-platform desktop chat"
       },
@@ -2125,7 +2125,7 @@
     },
     "TYPINGMIND": {
       "META": {
-        "TITLE": "TypingMind Integration Guide | {appName}",
+        "TITLE": "TypingMind Integration Guide · {appName}",
         "DESCRIPTION": "Connect TypingMind to {appName} by pasting a custom OpenAI-compatible endpoint.",
         "KEYWORDS": "TypingMind, TypingMind custom model, {appName} TypingMind, BYOK web frontend"
       },
@@ -2146,7 +2146,7 @@
     },
     "BOLTAI": {
       "META": {
-        "TITLE": "BoltAI Integration Guide | {appName}",
+        "TITLE": "BoltAI Integration Guide · {appName}",
         "DESCRIPTION": "Connect BoltAI to {appName} as a custom OpenAI-compatible server.",
         "KEYWORDS": "BoltAI, BoltAI OpenAI compatible, {appName} BoltAI, macOS AI assistant"
       },
@@ -2165,7 +2165,7 @@
     },
     "PAGE_ASSIST": {
       "META": {
-        "TITLE": "Page Assist Integration Guide | {appName}",
+        "TITLE": "Page Assist Integration Guide · {appName}",
         "DESCRIPTION": "Connect Page Assist to {appName} as a custom OpenAI-compatible API in the browser side panel.",
         "KEYWORDS": "Page Assist, Page Assist OpenAI compatible, {appName} Page Assist, browser AI extension"
       },
@@ -2186,7 +2186,7 @@
     },
     "CHATBOX": {
       "META": {
-        "TITLE": "Chatbox Integration Guide | {appName}",
+        "TITLE": "Chatbox Integration Guide · {appName}",
         "DESCRIPTION": "Connect Chatbox to {appName} using OpenAI API Compatible mode. Split the URL into Host and Path.",
         "KEYWORDS": "Chatbox, Chatbox OpenAI compatible, {appName} Chatbox, cross-platform chat client"
       },
@@ -2207,7 +2207,7 @@
     },
     "BIG_AGI": {
       "META": {
-        "TITLE": "Big-AGI Integration Guide | {appName}",
+        "TITLE": "Big-AGI Integration Guide · {appName}",
         "DESCRIPTION": "Connect Big-AGI to {appName} as an OpenAI source. Big-AGI fetches the catalog.",
         "KEYWORDS": "Big-AGI, Big-AGI OpenAI source, {appName} Big-AGI, web AI workbench"
       },
@@ -2226,7 +2226,7 @@
     },
     "OPENCODE": {
       "META": {
-        "TITLE": "OpenCode Setup Guide | {appName}",
+        "TITLE": "OpenCode Setup Guide · {appName}",
         "DESCRIPTION": "Connect OpenCode to {appName} with a custom OpenAI-compatible provider in opencode.json.",
         "KEYWORDS": "OpenCode, OpenCode setup, OpenCode provider, {appName} OpenCode, coding agent, OpenAI-compatible"
       },
@@ -2249,7 +2249,7 @@
     },
     "KILO_CODE": {
       "META": {
-        "TITLE": "Kilo Code Setup Guide | {appName}",
+        "TITLE": "Kilo Code Setup Guide · {appName}",
         "DESCRIPTION": "Connect Kilo Code to {appName} with a custom OpenAI-compatible provider in the VSCode sidebar.",
         "KEYWORDS": "Kilo Code, Kilo Code setup, VSCode coding agent, {appName} Kilo Code, custom provider, OpenAI-compatible"
       },
@@ -2273,7 +2273,7 @@
     },
     "ZED": {
       "META": {
-        "TITLE": "Zed IDE Setup Guide | {appName}",
+        "TITLE": "Zed IDE Setup Guide · {appName}",
         "DESCRIPTION": "Connect the Zed editor agent to {appName} with a custom OpenAI-compatible provider.",
         "KEYWORDS": "Zed, Zed IDE, Zed agent, {appName} Zed, custom provider, OpenAI-compatible editor"
       },
@@ -2294,7 +2294,7 @@
     },
     "CLINE": {
       "META": {
-        "TITLE": "Cline Setup Guide | {appName}",
+        "TITLE": "Cline Setup Guide · {appName}",
         "DESCRIPTION": "Connect Cline to {appName} as an OpenAI Compatible provider so it can read, edit, and run code with any model.",
         "KEYWORDS": "Cline, Cline setup, VSCode autonomous agent, {appName} Cline, OpenAI Compatible, coding agent"
       },
@@ -2315,7 +2315,7 @@
     },
     "ROO_CODE": {
       "META": {
-        "TITLE": "Roo Code Setup Guide | {appName}",
+        "TITLE": "Roo Code Setup Guide · {appName}",
         "DESCRIPTION": "Connect Roo Code to {appName} as an OpenAI Compatible provider so its planning, code, and QA roles share one base URL.",
         "KEYWORDS": "Roo Code, Roo Code setup, multi-agent VSCode, {appName} Roo Code, OpenAI Compatible, coding agent"
       },
@@ -2336,7 +2336,7 @@
     },
     "CONTINUE_DEV": {
       "META": {
-        "TITLE": "Continue.dev Setup Guide | {appName}",
+        "TITLE": "Continue.dev Setup Guide · {appName}",
         "DESCRIPTION": "Connect Continue.dev to {appName} with a version-controlled config.yaml. Continue hot-reloads the model entry.",
         "KEYWORDS": "Continue.dev, Continue setup, VSCode JetBrains assistant, {appName} Continue, config.yaml, OpenAI-compatible"
       },
@@ -2355,7 +2355,7 @@
     },
     "AIDER": {
       "META": {
-        "TITLE": "Aider Setup Guide | {appName}",
+        "TITLE": "Aider Setup Guide · {appName}",
         "DESCRIPTION": "Connect the Aider pair-programming CLI to {appName}. Set two env vars and pass openai/MODEL_ID as the model.",
         "KEYWORDS": "Aider, Aider setup, AI pair programming CLI, {appName} Aider, LiteLLM, OpenAI-compatible"
       },
@@ -2376,7 +2376,7 @@
     "LINK_COPIED": "Link copied",
     "NEVIKA": {
       "META": {
-        "TITLE": "Nevika Integration Guide | {appName}",
+        "TITLE": "Nevika Integration Guide · {appName}",
         "DESCRIPTION": "Connect Nevika to {appName} as a custom proxy. One key, hundreds of models.",
         "KEYWORDS": "Nevika, Nevika custom proxy, Nevika API key, {appName} Nevika, AI roleplay, character chat"
       },
@@ -2425,12 +2425,12 @@
   },
   "PRIVACY": {
     "META": {
-      "TITLE": "Privacy Policy - {appName}",
+      "TITLE": "Privacy Policy · {appName}",
       "DESCRIPTION": "Learn how {appName} collects, uses, and protects your personal information when using our AI API services.",
       "KEYWORDS": "privacy policy, data protection, {appName} privacy, AI API privacy"
     },
     "TITLE": "Privacy Policy",
-    "LAST_UPDATED": "Last Updated: November 1, 2026",
+    "LAST_UPDATED": "Last Updated: November 5, 2026",
     "INTRO": "{appName} (\"we\", \"us\", or \"our\") operates the {appDomain} website and API services. This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use our services. We route your requests to third-party AI model providers, so this policy also explains what happens to the prompts you send and how you can control which providers receive them. By using our services you agree to the practices described here. If you do not agree, please do not use the services.",
     "COLLECTION_TITLE": "1. Collection of Personal Data",
     "COLLECTION_VOLUNTARY_TITLE": "Information You Provide",
@@ -2442,7 +2442,7 @@
     "USE_TITLE": "2. How We Use Your Personal Data",
     "USE_CONTENT": "We use the information we collect to provide and maintain our services; to route your requests to the AI model provider you select and return the response; to maintain your credit balance; to send you technical notices and security alerts; to respond to your questions and support requests; to detect, investigate, and prevent fraud, abuse, and other illegal activity; and to comply with legal obligations. We do not use the content of your prompts or the responses you receive to train AI models, we do not sell your personal information, we do not send marketing email, and we do not use analytics or advertising trackers.",
     "SHARING_TITLE": "3. How We Share Your Personal Data",
-    "SHARING_CONTENT": "We share your information only where it is necessary to run the service or where the law requires it. AI model providers: when you send a request, its content is transmitted to the upstream provider that serves the model you chose, without your IP address, your account data or your AdoRouter key. Each provider handles data under its own terms, and some may retain or train on what they receive. Payment processing: Creem, our merchant of record in Estonia, processes purchases under its own privacy policy. Sign-in: if you sign in with GitHub, Google or Discord, that company handles it under its own privacy policy. Email: Resend delivers account emails such as verification codes and password resets. Bot protection: Cloudflare Turnstile checks sign-ins and sign-ups, and receives your IP address and browser details to do so. Infrastructure providers: hosting and content delivery vendors process data on our behalf. Legal and safety: we may disclose information where required by law, or where we reasonably believe disclosure is necessary to enforce our terms, investigate abuse, or protect the rights and safety of our users or the public. Business transfers: if AdoRouter is ever sold or merged, your information may be transferred as part of that transaction.",
+    "SHARING_CONTENT": "We share your information only where it is necessary to run the service or where the law requires it. AI model providers: when you send a request, its content is transmitted to the upstream provider that serves the model you chose, without your IP address, your account data or your AdoRouter key. Each provider handles data under its own terms, and some may retain or train on what they receive. Some providers do not develop the model themselves but give access to it, and may pass your request on to the model's developer or to another provider. Where a provider has not published how it handles inputs, we treat it as one that may keep or train on them (see section 4). Payment processing: Creem, our merchant of record in Estonia, processes purchases under its own privacy policy. Sign-in: if you sign in with GitHub, Google or Discord, that company handles it under its own privacy policy. Email: Resend delivers account emails such as verification codes and password resets. Bot protection: Cloudflare Turnstile checks sign-ins and sign-ups, and receives your IP address and browser details to do so. Infrastructure providers: hosting and content delivery vendors process data on our behalf. Legal and safety: we may disclose information where required by law, or where we reasonably believe disclosure is necessary to enforce our terms, investigate abuse, or protect the rights and safety of our users or the public. Business transfers: if AdoRouter is ever sold or merged, your information may be transferred as part of that transaction.",
     "SHARING_MODERATION": "Content checks for images and videos: before we carry out an image or video generation request, we send its text prompt to our merchant of record Creem in Estonia, because our payment provider requires such checks. Only the prompt text is sent, without your name, email address, IP address or any other identifier. Text requests are not checked this way. If a prompt is rejected, we keep only the result of the check in the usage log, not the prompt itself.",
     "TRAINING_TITLE": "4. Sharing with Model Providers That Use Inputs for Training",
     "TRAINING_CONTENT": "{appName} offers some models through providers that also use your inputs for their own purposes (in particular to train their models). Providers that have not published how they handle inputs are treated in the same way, because it cannot be ruled out that they use inputs for their own purposes. These providers process the data under their own responsibility. {appName} shows you which models and providers are affected when you choose a model. Passing your inputs to these providers is based not only on the performance of the contract but also on our legitimate interest in offering you the widest possible choice of AI models, including models that are only available on these terms (Art. 6(1)(f) GDPR). You choose the model yourself and are informed of the training use beforehand. Models without training use are available to you at any time. We only transmit the content of your input, not your account data, your IP address or any other identifiers.\n\nYou must not enter special categories of personal data within the meaning of Art. 9(1) GDPR, such as health data or data revealing racial or ethnic origin, political opinions, religious or philosophical beliefs or sex life, into models with training use. Our legitimate interest does not extend to such data.",
@@ -2458,7 +2458,7 @@
     "CHILDREN_TITLE": "9. Age Requirements",
     "CHILDREN_CONTENT": "Our services are not directed to children. You must be at least 13 years old to use them, and old enough to enter into a binding contract in your country of residence, or have the permission of a parent or guardian. We do not knowingly collect personal information from children under 13. If we learn that we have collected such information, we will delete it. If you believe a child has provided us personal data, contact us at {supportEmail}.",
     "TRANSFERS_TITLE": "10. International Data Transfers",
-    "TRANSFERS_CONTENT": "Your personal data may be transferred to and processed in countries other than your country of residence. For our own infrastructure, we transfer personal data out of the European Economic Area only where an adequacy decision of the European Commission covers the destination country or where standard contractual clauses approved by the European Commission are in place. Model providers are a separate case. Requests to DeepSeek models are served by DeepSeek in China, a country for which no adequacy decision exists. The level of data protection there is not comparable to that in the European Union: authorities may have far-reaching powers to access data, and you may not have equivalent rights and legal remedies. We ask for your consent before your inputs go to such a provider. Please do not put sensitive personal information in your prompts.",
+    "TRANSFERS_CONTENT": "Your personal data may be transferred to and processed in countries other than your country of residence. For our own infrastructure, we transfer personal data out of the European Economic Area only where an adequacy decision of the European Commission covers the destination country or where standard contractual clauses approved by the European Commission are in place. Model providers are a separate case. Some providers that serve models on {appName} are based outside the European Economic Area, in countries for which no adequacy decision exists, for example China, and are not bound to us by standard contractual clauses. The level of data protection there is not comparable to that in the European Union: authorities may have far-reaching powers to access data, and you may not have equivalent rights and legal remedies. Models are marked with the country of each provider that serves them. Because the provider is part of the service you choose, the transfer is necessary to perform our contract with you (Art. 49(1)(b) GDPR). Where such a provider also uses inputs for its own purposes, or has not published how it handles them, we only send your inputs there after you have expressly consented in a dialog that names the destination countries (Art. 49(1)(a) GDPR). You can withdraw that consent at any time on the Consents page, and the model is then blocked for you. Do not include personal data of other people in your prompts, and we advise against including your own.",
     "TRANSFERS_EMAIL": "Email: emails you send to our support address pass through Cloudflare's email routing service and are delivered to a mailbox with Google in the United States, and replies come from that mailbox. Please do not send sensitive information by email. Our site does not send marketing email.",
     "CHANGES_TITLE": "11. Changes to This Policy",
     "CHANGES_CONTENT": "We may update this Privacy Policy from time to time. We will post the updated policy here, update the \"Last Updated\" date above, and show you material changes when you next sign in.",
@@ -2467,7 +2467,7 @@
   },
   "TERMS": {
     "META": {
-      "TITLE": "Terms of Service - {appName}",
+      "TITLE": "Terms of Service · {appName}",
       "DESCRIPTION": "Terms of Service governing the use of {appName}'s AI API aggregation platform and related services.",
       "KEYWORDS": "terms of service, terms and conditions, {appName} terms, AI API terms"
     },
@@ -2482,13 +2482,13 @@
     "ACCOUNTS_CONTENT": "You can use an email address and password, or a GitHub, Google or Discord account. You agree to keep your account information accurate. You are solely responsible for keeping your API keys confidential and for all activities that occur under your account.",
     "PAYMENT_TITLE": "4. Payment Terms",
     "PAYMENT_CONTENT_INTRO": "Access to the Services requires credits. Payments are handled by Creem, our merchant of record, which is the seller of your purchase and handles any tax due. Creem's terms apply to the purchase.",
-    "PAYMENT_CREDITS": "Credits: Credits are purchased in advance, shown in US dollars, and deducted as you use the Services at the provider's list price plus our margin. Some providers charge less at off-peak times, so the same request can cost different amounts at different times. The minimum top-up is $1. Top-ups under $5 include a $0.50 fee, shown before you pay. Credits have no cash value and cannot be transferred.",
+    "PAYMENT_CREDITS": "Credits: Credits are purchased in advance, shown in US dollars, and deducted as you use the Services at the price shown for each model on our Models page when the request is made. Some providers charge less at off-peak times, so the same request can cost different amounts at different times. The minimum top-up is $1. Top-ups under $5 include a $0.50 fee, shown before you pay. Credits have no cash value and cannot be transferred.",
     "PAYMENT_REFUNDS": "Refunds: Refunds are handled under our Refund Policy.",
     "PAYMENT_EXPIRATION": "Expiration: Purchased credits do not expire.",
     "USER_CONTENT_TITLE": "5. User Content and Data",
     "USER_CONTENT_CONTENT": "You retain ownership of the content you submit through the Services (\"User Content\"). Ownership of AI-generated outputs depends on the terms of the specific AI model used. We do not use your User Content to train AI models. You grant us a limited license to process your User Content solely for the purpose of providing the Services.",
     "THIRD_COUNTRIES_TITLE": "6. Providers in Third Countries and Data Transfers",
-    "THIRD_COUNTRIES_CONTENT": "(1) Some providers through which {appName} offers models in the model catalog are based in a third country that is neither covered by an adequacy decision of the European Commission nor has agreed appropriate safeguards within the meaning of Art. 46 GDPR with {appName}. The country of such a provider is referred to below as an \"unsafe third country\". These providers either offer their own models or give access to models of other developers. All offers of these providers are marked as such in the model catalog, stating the country where they are based (\"marked offers\"). The same model may also be available through other providers. Their offers are not marked.\n\n(2) When you use a marked offer, your inputs, including any personal data they contain, are transferred to the respective unsafe third country. The level of data protection in these third countries is not comparable to that in the European Union. In particular, authorities there sometimes have far-reaching powers to access data, and data subjects do not have equivalent rights and legal remedies. No appropriate safeguards within the meaning of Art. 46 GDPR exist for these transfers. Further information is provided in the privacy policy.\n\n(3) DeepSeek is based in China and is currently such a provider. For consumers, providing the marked offers is part of the contractual service of {appName}. The contractual service consists of two elements: the model and the provision route, meaning the provider through which the model is provided. What is owed is always the specifically selected model via the specifically selected provider. Consumers must not enter or otherwise transmit personal data of third parties when using marked offers. This also applies to files, images and other content from which third parties can be identified. Because of the risks described in paragraph 2, {appName} advises against entering your own personal data as well. Consumers can avoid the transfer of their personal data to unsafe third countries at any time by not using marked offers or by not entering personal data into them.\n\n(4) {appName} currently does not offer accounts for business customers. Marked offers are not available to business customers. {appName} routes requests from business customers exclusively through providers that are based in the European Union or the European Economic Area, are covered by an adequacy decision of the European Commission, or have agreed appropriate safeguards within the meaning of Art. 46 GDPR (in particular standard contractual clauses).\n\n(5) Some models are provided through providers that also use inputs for their own purposes, in particular to train AI models; this applies to free and paid models alike. Providers that have not published how they handle inputs are treated in the same way. Such models are marked when a model is selected. If such a provider is based in an unsafe third country, {appName} obtains a separate consent to the transfer before the first use, naming the country of establishment. The consent relates to the providers through which the model is provided at the time of consent; if another such provider is added, a new consent is required. The consent can be withdrawn at any time. Consumers may object at any time, on grounds relating to their particular situation, to their inputs being passed to such providers (Art. 21(1) GDPR); after an objection, {appName} no longer forwards their inputs to these providers, and models that are only available through such providers are no longer available to them. Consumers must not enter special categories of personal data within the meaning of Art. 9(1) GDPR, such as health data, into such models. Details are provided in the privacy policy.",
+    "THIRD_COUNTRIES_CONTENT": "(1) Some providers through which {appName} offers models in the model catalog are based in a third country that is neither covered by an adequacy decision of the European Commission nor has agreed appropriate safeguards within the meaning of Art. 46 GDPR with {appName}. The country of such a provider is referred to below as an \"unsafe third country\". These providers either offer their own models or give access to models of other developers. All offers of these providers are marked as such in the model catalog, stating the country where they are based (\"marked offers\"). The same model may also be available through other providers. Their offers are not marked.\n\n(2) When you use a marked offer, your inputs, including any personal data they contain, are transferred to the respective unsafe third country. The level of data protection in these third countries is not comparable to that in the European Union. In particular, authorities there sometimes have far-reaching powers to access data, and data subjects do not have equivalent rights and legal remedies. No appropriate safeguards within the meaning of Art. 46 GDPR exist for these transfers. Further information is provided in the privacy policy.\n\n(3) The model catalog shows which providers are currently affected and the countries they are based in. For consumers, providing the marked offers is part of the contractual service of {appName}. The contractual service consists of two elements: the model and the provision route, meaning the provider through which the model is provided. What is owed is always the specifically selected model via the specifically selected provider. Consumers must not enter or otherwise transmit personal data of third parties when using marked offers. This also applies to files, images and other content from which third parties can be identified. Because of the risks described in paragraph 2, {appName} advises against entering your own personal data as well. Consumers can avoid the transfer of their personal data to unsafe third countries at any time by not using marked offers or by not entering personal data into them.\n\n(4) {appName} currently does not offer accounts for business customers. Marked offers are not available to business customers. {appName} routes requests from business customers exclusively through providers that are based in the European Union or the European Economic Area, are covered by an adequacy decision of the European Commission, or have agreed appropriate safeguards within the meaning of Art. 46 GDPR (in particular standard contractual clauses).\n\n(5) Some models are provided through providers that also use inputs for their own purposes, in particular to train AI models; this applies to free and paid models alike. Providers that have not published how they handle inputs are treated in the same way. Such models are marked when a model is selected. If such a provider is based in an unsafe third country, {appName} obtains a separate consent to the transfer before the first use, naming the country of establishment. The consent relates to the providers through which the model is provided at the time of consent; if another such provider is added, a new consent is required. The consent can be withdrawn at any time. Consumers may object at any time, on grounds relating to their particular situation, to their inputs being passed to such providers (Art. 21(1) GDPR); after an objection, {appName} no longer forwards their inputs to these providers, and models that are only available through such providers are no longer available to them. Consumers must not enter special categories of personal data within the meaning of Art. 9(1) GDPR, such as health data, into such models. Details are provided in the privacy policy.",
     "PROHIBITED_TITLE": "7. Prohibited Conduct",
     "PROHIBITED_CONTENT": "You agree not to use the Services to violate any applicable laws or regulations; create false identities or impersonate others; engage in automated scraping or data mining; infringe on third-party intellectual property rights; attempt to disrupt, overload, or interfere with the Services; engage in fraudulent activity; resell access to your account without authorization; or generate, request, or distribute sexually explicit, pornographic, or NSFW content, including AI-generated content, child sexual abuse material, non-consensual sexual content, or deepfake and face-swap imagery. You are responsible for the outputs generated from your use of the Services. Your use of the Services is also governed by our Acceptable Use Policy.",
     "TERMINATION_TITLE": "8. Termination",
@@ -2514,7 +2514,7 @@
   },
   "REFUND": {
     "META": {
-      "TITLE": "Refund Policy - {appName}",
+      "TITLE": "Refund Policy · {appName}",
       "DESCRIPTION": "Learn how refunds are handled for credits and subscriptions purchased through {appName}, including eligibility, timelines, and how to request one.",
       "KEYWORDS": "refund policy, refunds, {appName} refund, AI API refund, subscription refund"
     },
@@ -2552,7 +2552,7 @@
     "TITLE": "Acceptable Use Policy",
     "LAST_UPDATED": "Last Updated: October 30, 2026",
     "META": {
-      "TITLE": "Acceptable Use Policy - {appName}",
+      "TITLE": "Acceptable Use Policy · {appName}",
       "DESCRIPTION": "Acceptable Use Policy for {appName}. Prohibited content and conduct, including a ban on sexually explicit, NSFW, deepfake, and harmful content generation.",
       "KEYWORDS": "acceptable use policy, {appName} AUP, prohibited content, content policy, AI usage policy, NSFW prohibition"
     },
@@ -2576,7 +2576,7 @@
     "TITLE": "Legal Notice",
     "LAST_UPDATED": "Last Updated: October 30, 2026",
     "META": {
-      "TITLE": "Legal Notice - {appName}",
+      "TITLE": "Legal Notice · {appName}",
       "DESCRIPTION": "Legal notice for {appName}: contact details and consumer disputes.",
       "KEYWORDS": "legal notice, {appName}, contact"
     },
@@ -2757,14 +2757,14 @@
       "GUEST": "Guest"
     },
     "META": {
-      "LOGIN_TITLE": "Sign In - {appName}",
+      "LOGIN_TITLE": "Sign In · {appName}",
       "LOGIN_DESCRIPTION": "Sign in to your {appName} account to access the AI API dashboard.",
-      "REGISTER_TITLE": "Create Account - {appName}",
+      "REGISTER_TITLE": "Create Account · {appName}",
       "REGISTER_DESCRIPTION": "Create a {appName} account to start using all AI models through one API.",
       "KEYWORDS": "{appName} login, {appName} register, AI API account, sign in",
-      "FORGOT_PASSWORD_TITLE": "Reset Password - {appName}",
+      "FORGOT_PASSWORD_TITLE": "Reset Password · {appName}",
       "FORGOT_PASSWORD_DESCRIPTION": "Request a password reset link for your {appName} account.",
-      "RESET_PASSWORD_TITLE": "Reset Password - {appName}",
+      "RESET_PASSWORD_TITLE": "Reset Password · {appName}",
       "RESET_PASSWORD_DESCRIPTION": "Set a new password for your {appName} account."
     },
     "CONSENT": {
@@ -2781,7 +2781,7 @@
       "RETURN_HOME": "Return to dashboard",
       "SECURITY_NOTE": "Only approve requests from apps you trust. You can revoke access any time from your dashboard.",
       "SECURITY_NOTE_PERSISTENT": "This app will stay signed in until you revoke access. Only approve requests from apps you trust. You can revoke access any time from your dashboard.",
-      "META_TITLE": "Authorize app - {appName}",
+      "META_TITLE": "Authorize app · {appName}",
       "META_DESCRIPTION": "Review and approve a third-party app's request to access your {appName} account.",
       "SCOPE": {
         "OPENID": "Identify you as a {appName} user",
@@ -2854,19 +2854,19 @@
     },
     "STATS": {
       "REQUEST_COUNT": "Number of Requests",
-      "STATISTICAL_COUNT": "Statistical Count",
-      "STATISTICAL_QUOTA": "Statistical Quota",
-      "STATISTICAL_TOKENS": "Statistical Tokens",
+      "STATISTICAL_COUNT": "Requests",
+      "STATISTICAL_QUOTA": "Spent",
+      "STATISTICAL_TOKENS": "Tokens",
       "AVERAGE_RPM": "Average RPM",
       "AVERAGE_TPM": "Average TPM",
-      "STATISTICAL_COUNT_CAPTION": "Statistical count",
-      "STATISTICAL_QUOTA_CAPTION": "Statistical quota",
-      "STATISTICAL_TOKENS_CAPTION": "Statistical tokens",
+      "STATISTICAL_COUNT_CAPTION": "In the selected range",
+      "STATISTICAL_QUOTA_CAPTION": "In the selected range",
+      "STATISTICAL_TOKENS_CAPTION": "In the selected range",
       "AVERAGE_RPM_CAPTION": "Requests per minute",
       "AVERAGE_TPM_CAPTION": "Tokens per minute"
     },
     "CHART": {
-      "MODEL_DATA_ANALYSIS": "Model Data Analysis",
+      "MODEL_DATA_ANALYSIS": "Usage by model",
       "RESET_DATE_RANGE": "Reset date range",
       "CONSUMPTION_DISTRIBUTION": "Consumption Distribution",
       "CONSUMPTION_TREND": "Consumption Trend",
@@ -3873,7 +3873,7 @@
       "TAB_SENT_HINT": "The exact sampling and reasoning parameters handed to the SDK after unsupported ones were stripped. If your reasoning effort setting is here, it was sent.",
       "BADGE_REASONING": "reasoning"
     },
-    "NEW_CONVERSATION": "New Chat",
+    "NEW_CONVERSATION": "New chat",
     "GENERATION_LOCKED_OTHER_TAB": "Another tab is already generating for this conversation. Wait for it to finish or switch tabs.",
     "QUEUED_OFFLINE": "You're offline. Your message is saved, so send it again once you're back online.",
     "SEARCH_PLACEHOLDER": "Search conversations...",
@@ -3885,8 +3885,8 @@
     "DELETE_SELECTED": "Delete ({count})",
     "DELETE_SELECTED_TITLE": "Delete selected chats?",
     "DELETE_SELECTED_DESC": "This permanently deletes the selected chats and all of their messages. It cannot be undone.",
-    "EMPTY_TITLE": "Start a Conversation",
-    "EMPTY_DESCRIPTION": "Select a model and start chatting to test any AI model.",
+    "EMPTY_TITLE": "What would you like to ask?",
+    "EMPTY_DESCRIPTION": "Pick a model at the top and send a message. Replies are paid from your balance.",
     "LOADOUT": {
       "TITLE": "Loadout",
       "HINT": "Applies to this and every new chat until you change it."
@@ -4695,8 +4695,8 @@
   },
   "STATUS": {
     "META": {
-      "TITLE": "Model Status - {appName}",
-      "DESCRIPTION": "Live availability and latency for every AI model on {appName}. Real-time channel health, request volume, and historical uptime.",
+      "TITLE": "Status · {appName}",
+      "DESCRIPTION": "Availability, uptime and latency for each model on {appName}, checked every minute.",
       "KEYWORDS": "AI model status, uptime, model availability, AI gateway health, latency monitoring"
     },
     "BADGE": "Live Status",
@@ -4783,7 +4783,7 @@
   },
   "MODEL_TESTER": {
     "META": {
-      "TITLE": "AI API Model Tester | {appName}",
+      "TITLE": "AI API Model Tester · {appName}",
       "DESCRIPTION": "Verify which model an API endpoint actually serves. Deterministic authenticity checks for Claude, GPT and Gemini, run in your browser.",
       "KEYWORDS": "model tester, api authenticity, fake model detection, claude, gpt, gemini"
     },
@@ -4881,7 +4881,7 @@
       "DELETE_BODY": "This removes the test from your local history.",
       "DELETE_CONFIRM": "Delete",
       "DELETE_CANCEL": "Cancel",
-      "META_TITLE": "Test History | {appName}"
+      "META_TITLE": "Test History · {appName}"
     },
     "RANKINGS": {
       "EMPTY": "No published results yet.",
@@ -4892,7 +4892,7 @@
       "STAT_DETECTIONS": "Total detections",
       "STAT_PROVIDERS": "Providers tracked",
       "STAT_PASS_RATE": "Avg pass rate",
-      "META_TITLE": "Model Authenticity Rankings | {appName}",
+      "META_TITLE": "Model Authenticity Rankings · {appName}",
       "META_DESCRIPTION": "See which API providers serve the real model they claim, ranked by deterministic fingerprint pass rate.",
       "DISCLAIMER": "Every published result is re-run on our server before it counts, and each verdict links the exact evidence that produced it. A result you believe is wrong can be disputed.",
       "REPORT_DISCORD": "Report on Discord",
@@ -6459,7 +6459,7 @@
     "MANAGE": "Manage consents",
     "SAVED": "Consent saved",
     "META": {
-      "TITLE": "Model consents | {appName}",
+      "TITLE": "Consents · {appName}",
       "DESCRIPTION": "Give or withdraw your consent for each provider on {appName} that uses your inputs for its own purposes.",
       "KEYWORDS": "training use, consent, privacy, third country transfer"
     },
