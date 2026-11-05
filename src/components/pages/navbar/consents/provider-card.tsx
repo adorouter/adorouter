@@ -29,7 +29,7 @@ export function ProviderCard(props: {
   return (
     <Collapsible
       className={cn(
-        "border-border/60 border-b px-2 py-3",
+        "border-border bg-card rounded-2xl border p-5",
         !props.provider.active && "opacity-60",
       )}
     >
@@ -46,7 +46,7 @@ export function ProviderCard(props: {
         <ProviderStatusBadge provider={props.provider} />
         <ProviderAction provider={props.provider} handlers={props.handlers} />
       </div>
-      <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/pc mt-1 flex w-full min-w-0 items-center gap-3 text-left text-sm">
+      <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/pc mt-3 flex w-full min-w-0 items-center gap-3 text-left text-sm">
         <span className="min-w-0 flex-1">
           <ProviderCountry provider={props.provider} />
         </span>

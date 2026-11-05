@@ -122,7 +122,7 @@ export function ProviderView(props: {
 
   return (
     <SidebarProvider
-      defaultOpen
+      defaultOpen={false}
       className="relative h-auto min-h-0 overflow-visible"
     >
       <ProviderFilterSidebar providers={providers} filters={filters} />

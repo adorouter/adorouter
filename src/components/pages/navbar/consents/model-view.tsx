@@ -79,7 +79,7 @@ export function ModelView(props: {
 
   return (
     <SidebarProvider
-      defaultOpen
+      defaultOpen={false}
       className="relative h-auto min-h-0 overflow-visible"
     >
       <ConsentFilterSidebar rows={rows} filters={filters} />
@@ -135,13 +135,15 @@ export function ModelView(props: {
               stickyHeaderTop="calc(3.5rem + 2.4375rem)"
             />
           ) : (
-            filters.filtered.map((row) => (
-              <ConsentModelCard
-                key={row.model.model_name}
-                row={row}
-                onOpen={props.onOpen}
-              />
-            ))
+            <div className="space-y-3">
+              {filters.filtered.map((row) => (
+                <ConsentModelCard
+                  key={row.model.model_name}
+                  row={row}
+                  onOpen={props.onOpen}
+                />
+              ))}
+            </div>
           )}
         </div>
       </SidebarInset>

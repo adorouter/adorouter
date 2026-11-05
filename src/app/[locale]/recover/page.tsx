@@ -1,3 +1,4 @@
+import { AdoStandalone } from "@/components/pages/ado/ado-parts";
 import { InlineRepairScript } from "@/components/elements/feedback/inline-repair";
 import { getPageMetadata } from "@/lib/seo/metadata";
 import { serverLocale } from "@/lib/utils/server";
@@ -27,20 +28,19 @@ export default async function RecoverPage(props: {
   const t = await getTranslations({ locale });
   const next = `/${locale}/chat`;
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center p-4">
-      <div className="bg-card text-card-foreground w-full max-w-md rounded-xl border p-6 text-center shadow-sm">
-        <h1 className="text-xl font-semibold">{t("MAIN.RECOVER.TITLE")}</h1>
-        <p className="text-muted-foreground mt-3 text-sm">
-          {t("MAIN.RECOVER.DESCRIPTION")}
-        </p>
+    <>
+      <AdoStandalone
+        title={t("MAIN.RECOVER.TITLE")}
+        description={t("MAIN.RECOVER.DESCRIPTION")}
+      >
         <a
           href={next}
-          className="text-primary mt-4 inline-block text-sm underline"
+          className="border-border hover:border-foreground/40 inline-flex items-center rounded-full border px-5 py-2.5 font-semibold transition-colors"
         >
           {t("MAIN.ACTIONS.TRY_AGAIN")}
         </a>
-      </div>
+      </AdoStandalone>
       <InlineRepairScript auto={next} />
-    </div>
+    </>
   );
 }

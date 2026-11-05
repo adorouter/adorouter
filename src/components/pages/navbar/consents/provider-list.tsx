@@ -35,9 +35,9 @@ export function ProviderList(props: {
   });
   if (props.view === "list")
     return (
-      <div>
+      <div className="space-y-3">
         {props.selection && (
-          <label className="border-border/60 flex items-center gap-3 border-b px-2 py-2">
+          <label className="flex items-center gap-3 px-2 py-1">
             <ProviderSelectAll selection={props.selection} />
             <span className="text-muted-foreground text-xs">
               {t("PROVIDER_CONSENT.SELECT.ALL")}

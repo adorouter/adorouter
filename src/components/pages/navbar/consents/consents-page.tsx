@@ -29,7 +29,8 @@ const TAB_ICON: Record<Tab, IconName> = {
 // model's missing providers; the provider dialog lives in the URL too.
 const PARSERS = {
   tab: parseAsStringLiteral(TABS).withDefault("providers"),
-  view: parseAsStringLiteral(["table", "list"] as const).withDefault("table"),
+  // AdoRouter: cards by default; the table stays one click away.
+  view: parseAsStringLiteral(["table", "list"] as const).withDefault("list"),
   model: parseAsString,
   alias: parseAsString,
 };
@@ -43,21 +44,23 @@ export function ConsentsPage() {
   }
 
   return (
-    <div className="w-full pt-20 pb-16">
-      <div className="mb-4 space-y-3 px-4 md:px-6">
-        <h1 className="text-lg font-semibold tracking-tight">
-          {t("CONSENT.PAGE_TITLE")}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {t("CONSENT.PAGE_INTRO")}
-        </p>
-        <div className="bg-card space-y-2 rounded-lg border p-4">
-          <h2 className="text-foreground text-sm font-medium">
+    <div className="mx-auto w-full max-w-6xl pt-28 pb-16">
+      <div className="mb-8 space-y-6 px-4 md:px-6">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+            {t("CONSENT.PAGE_TITLE")}
+          </h1>
+          <p className="text-foreground/80 mt-3 max-w-3xl text-lg">
+            {t("CONSENT.PAGE_INTRO")}
+          </p>
+        </div>
+        <div className="border-border bg-card space-y-3 rounded-2xl border p-6">
+          <h2 className="text-foreground text-lg font-semibold">
             {t("OWN_PURPOSE.TITLE")}
           </h2>
           <OwnPurposeObjectionToggle />
         </div>
-        <div className="border-border flex gap-1 border-b pb-px">
+        <div className="flex flex-wrap gap-2">
           {TABS.map((tab) => {
             const active = params.tab === tab;
             return (
@@ -67,10 +70,10 @@ export function ConsentsPage() {
                 onClick={() => void setParams({ tab, model: null })}
                 aria-pressed={active}
                 className={cn(
-                  "flex items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-sm whitespace-nowrap transition-colors",
+                  "flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
                   active
-                    ? "border-primary text-foreground"
-                    : "text-muted-foreground hover:text-foreground border-transparent",
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border text-foreground/80 hover:border-foreground/40",
                 )}
               >
                 <Icon name={TAB_ICON[tab]} className="h-4 w-4" />

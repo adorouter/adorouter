@@ -81,3 +81,32 @@ export function AdoSupportEmail() {
     </a>
   );
 }
+
+// Full-screen notice for the pages that render outside the site chrome
+// (offline, recover). Plain markup only: recover must work with no client JS.
+export function AdoStandalone(props: {
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="bg-background flex min-h-screen items-center px-6">
+      <div className="mx-auto w-full max-w-xl">
+        <p className="text-primary font-mono text-sm font-semibold tracking-widest uppercase">
+          {env.appName}
+        </p>
+        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
+          {props.title}
+        </h1>
+        <p className="text-foreground/80 mt-4 text-lg leading-relaxed">
+          {props.description}
+        </p>
+        {props.children && (
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {props.children}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
