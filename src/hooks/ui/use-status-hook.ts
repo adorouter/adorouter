@@ -180,6 +180,10 @@ export function useStatusFilter() {
 
   return {
     bucket,
+    hours,
+    isPending: q.isPending,
+    allComponents: components,
+    vendorOf: (name: string) => vendorByModel.get(name) ?? UNGROUPED_VENDOR,
     setBucket,
     search,
     setSearch,

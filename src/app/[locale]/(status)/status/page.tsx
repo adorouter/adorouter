@@ -33,6 +33,14 @@ export default async function StatusRoute(props: {
     prefetchElysia(queryClient, queryKeys.modelStatusComponents(), () =>
       rpc.api.models["model-status"].components.get(),
     ),
+    // The list itself, for the default window (1m buckets over 1 hour).
+    // Without it the first paint said "No models match" until the browser
+    // fetched it.
+    prefetchElysia(queryClient, queryKeys.modelStatusPage("1m", 1), () =>
+      rpc.api.models["model-status"].page_compact.get({
+        query: { bucket: "1m", hours: 1 },
+      }),
+    ),
     prefetchElysia(queryClient, queryKeys.pricingVendors(), () =>
       rpc.api.models.pricing.vendors.get(),
     ),

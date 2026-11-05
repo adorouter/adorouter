@@ -1,11 +1,7 @@
 "use client";
 
-import { LogoImage } from "@/components/elements/brand/brand";
 import { VendorIcon } from "@/components/elements/brand/vendor-icon";
-import { VendorFilter } from "@/components/pages/navbar/models/filters/vendor-filter";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -13,107 +9,173 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StatusBanner } from "@/components/ui/status/status-banner";
 import { StatusBar } from "@/components/ui/status/status-bar";
-import {
-  StatusComponent,
-  StatusComponentBody,
-  StatusComponentDescription,
-  StatusComponentHeader,
-  StatusComponentHeaderLeft,
-  StatusComponentHeaderRight,
-  StatusComponentIcon,
-  StatusComponentStatus,
-  StatusComponentTitle,
-  StatusComponentUptime,
-} from "@/components/ui/status/status-component";
 import { usePerfMetricsSummaryQuery } from "@/hooks/models/perf-metrics-hook";
-import { usePricingVendorsQuery } from "@/hooks/models/pricing-hook";
 import { BUCKET_OPTIONS, useStatusFilter } from "@/hooks/ui/use-status-hook";
 import { env } from "@/lib/config/env";
-import type { IconName } from "@/lib/config/icon-map";
 import { cn } from "@/lib/utils";
-import { formatLatency, formatTps } from "@/lib/utils/format/number";
 import { formatHoursLabel } from "@/lib/utils/format/date";
+import { formatLatency, formatTps } from "@/lib/utils/format/number";
 import type { ModelSummary } from "@/openapi";
-import { useTranslations } from "next-intl";
-import { WindowVirtualizer } from "virtua";
 import { StatusBlocksI18n } from "./status-blocks-i18n";
-import { SummaryCards } from "./summary-cards";
 
+type Tone = "success" | "degraded" | "error";
+
+const TONE = {
+  success: {
+    label: "Operational",
+    dot: "bg-emerald-400",
+    text: "text-emerald-400",
+  },
+  degraded: {
+    label: "Degraded",
+    dot: "bg-amber-400",
+    text: "text-amber-400",
+  },
+  error: { label: "Down", dot: "bg-red-500", text: "text-red-400" },
+} satisfies Record<Tone, { label: string; dot: string; text: string }>;
+
+const OVERALL: Record<Tone, string> = {
+  success: "All models are operational",
+  degraded: "Some models are degraded",
+  error: "Most models are down",
+};
+
+const FILTERS = [
+  { value: "all", label: "All" },
+  { value: "success", label: "Operational" },
+  { value: "degraded", label: "Degraded" },
+  { value: "error", label: "Down" },
+] as const;
+
+function toTone(status: string): Tone {
+  return status === "degraded" || status === "error" ? status : "success";
+}
+
+// AdoRouter layout: a plain header with the overall state, one stats strip and
+// a flat list of model rows, inside the site's navbar and footer. unorouter's
+// version was a standalone centred page with banners and summary cards.
 export function StatusPage() {
-  const t = useTranslations();
   const s = useStatusFilter();
-  const pricing = usePricingVendorsQuery();
-  const vendorCounts = (() => {
-    const counts = new Map<string, number>();
-    for (const m of pricing.data?.model_vendors ?? []) {
-      counts.set(m.vendor, (counts.get(m.vendor) ?? 0) + 1);
-    }
-    return Array.from(counts, ([name, count]) => ({ name, count })).sort(
-      (a, b) => b.count - a.count,
-    );
-  })();
   const perfQuery = usePerfMetricsSummaryQuery(24);
   const perfMap = new Map<string, ModelSummary>(
     (perfQuery.data?.models ?? []).map((row) => [row.model_name, row]),
   );
 
+  // The flat filtered list, not the grouped items: grouping by vendor and the
+  // collapsed-vendor cookie add nothing with a short catalog.
+  const rows = s.filtered;
+  const total = s.allComponents.length;
+  const counts = { success: 0, degraded: 0, error: 0 };
+  for (const c of s.allComponents) counts[toTone(c.status)] += 1;
+  const overall = toTone(s.overallStatus);
+
   return (
     <StatusBlocksI18n>
-      <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-12 text-center">
-          <a
-            href={env.appUrl}
-            className="group focus-visible:ring-ring/50 mb-6 inline-flex cursor-pointer items-center gap-2 rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-1.5 transition-colors hover:border-red-500/60 hover:bg-red-500/20 focus-visible:ring-2 focus-visible:outline-none"
-            aria-label={env.appName}
-          >
-            <LogoImage
-              width={14}
-              height={14}
-              className="rounded-none transition-transform group-hover:scale-110"
-            />
-            <span className="font-mono text-[10px] tracking-[0.2em] text-red-500 uppercase group-hover:underline">
-              {t("STATUS.BADGE")}
+      <div className="mx-auto w-full max-w-5xl px-5 pt-28 pb-20">
+        <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+              Status
+            </h1>
+            <p className="text-foreground/80 mt-3 text-lg">
+              Availability of each model, updated every minute.
+            </p>
+          </div>
+          <div className="border-border bg-card flex items-center gap-3 rounded-full border px-5 py-2.5">
+            <span className="relative flex size-2.5">
+              <span
+                className={cn(
+                  "absolute inline-flex size-full animate-ping rounded-full opacity-60",
+                  TONE[overall].dot,
+                )}
+              />
+              <span
+                className={cn(
+                  "relative inline-flex size-2.5 rounded-full",
+                  TONE[overall].dot,
+                )}
+              />
             </span>
-          </a>
-          <h1 className="text-4xl font-bold tracking-tighter">
-            {t("STATUS.TITLE")}
-          </h1>
-          <p className="text-muted-foreground mt-3 font-mono text-sm leading-relaxed">
-            {t("STATUS.SUBTITLE")}
-          </p>
-          {env.discordUrl && (
-            <a
-              href={env.discordUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground mt-3 inline-flex items-center gap-1.5 text-xs transition-colors"
+            <span className="font-medium">{OVERALL[overall]}</span>
+          </div>
+        </header>
+
+        <dl className="border-border mt-10 grid grid-cols-2 rounded-2xl border sm:grid-cols-4">
+          {[
+            { label: "Models", value: total, tone: "text-foreground" },
+            {
+              label: "Operational",
+              value: counts.success,
+              tone: TONE.success.text,
+            },
+            {
+              label: "Degraded",
+              value: counts.degraded,
+              tone:
+                counts.degraded > 0 ? TONE.degraded.text : "text-foreground/60",
+            },
+            {
+              label: "Down",
+              value: counts.error,
+              tone: counts.error > 0 ? TONE.error.text : "text-foreground/60",
+            },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              className={cn(
+                "border-border px-6 py-5",
+                i % 2 === 1 && "border-l",
+                i >= 2 && "border-t sm:border-t-0",
+                i === 2 && "sm:border-l",
+              )}
             >
-              <Icon name="brand-discord" className="h-3.5 w-3.5" />
-              {t("STATUS.DISCORD")}
-            </a>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <StatusBanner status={s.overallStatus} />
-          <SummaryCards />
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full">
-              <Icon
-                name="search"
-                className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-              />
-              <Input
-                placeholder={t("STATUS.FILTER.SEARCH_PLACEHOLDER")}
-                value={s.search}
-                onChange={(e) => s.setSearch(e.target.value)}
-                className="pl-10"
-              />
+              <dt className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+                {stat.label}
+              </dt>
+              <dd
+                className={cn(
+                  "mt-1 text-3xl font-bold tabular-nums",
+                  stat.tone,
+                )}
+              >
+                {stat.value}
+              </dd>
             </div>
-            <VendorFilter vendorCounts={vendorCounts} />
+          ))}
+        </dl>
+
+        <div className="mt-10 flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="border-border focus-within:border-foreground/50 flex flex-1 items-center gap-2 rounded-full border px-4 py-2">
+            <Icon name="search" className="text-muted-foreground h-4 w-4" />
+            <input
+              value={s.search}
+              onChange={(e) => s.setSearch(e.target.value)}
+              placeholder="Search models"
+              aria-label="Search models"
+              className="w-full bg-transparent outline-none"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTERS.map((f) => {
+              const active = s.statusFilter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => s.setStatusFilter(f.value)}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-foreground/80 hover:border-foreground/40",
+                  )}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
             <Select
               value={s.bucket}
               onValueChange={(v) => {
@@ -122,231 +184,101 @@ export function StatusPage() {
               }}
             >
               <SelectTrigger
-                aria-label={t("STATUS.FILTER.TIME_WINDOW")}
-                className="w-27.5 font-mono text-xs"
+                aria-label="Time window"
+                className="rounded-full text-sm"
               >
-                <SelectValue />
+                <SelectValue>{formatHoursLabel(s.hours)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {BUCKET_OPTIONS.map((o) => (
-                  <SelectItem
-                    key={o.value}
-                    value={o.value}
-                    className="font-mono text-xs"
-                  >
-                    <span className="flex w-full items-center justify-between gap-3">
-                      <span>{o.value}</span>
-                      <span className="text-muted-foreground text-[10px]">
-                        {formatHoursLabel(o.hours)}
-                      </span>
-                    </span>
+                  <SelectItem key={o.value} value={o.value}>
+                    {formatHoursLabel(o.hours)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex flex-wrap items-center gap-1">
-              {(
-                [
-                  { value: "all", label: t("STATUS.FILTER.STATUS_ALL") },
-                  { value: "success", label: t("STATUS.STATE.OPERATIONAL") },
-                  { value: "degraded", label: t("STATUS.STATE.DEGRADED") },
-                  { value: "error", label: t("STATUS.STATE.DOWN") },
-                ] as const
-              ).map((p) => (
-                <FilterPill
-                  key={p.value}
-                  active={s.statusFilter === p.value}
-                  onClick={() => s.setStatusFilter(p.value)}
-                  label={p.label}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {s.isPending && rows.length === 0 ? (
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="border-border bg-card h-32 animate-pulse rounded-2xl border"
                 />
               ))}
-              {s.visibleVendors.length > 0 && (
-                <CollapseAllButton
-                  collapsed={s.allCollapsed}
-                  onClick={s.toggleAllGroups}
-                />
-              )}
-              {s.hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={s.resetFilters}
-                  className="font-mono text-xs"
-                >
-                  {t("MODELS.FILTER.RESET")}
-                  <Icon name="x" className="ml-1 h-4 w-4" />
-                </Button>
-              )}
             </div>
-          </div>
-
-          {s.filtered.length === 0 ? (
-            <p className="text-muted-foreground py-24 text-center font-mono text-sm">
-              {t("STATUS.FILTER.EMPTY")}
+          ) : rows.length === 0 ? (
+            <p className="border-border text-muted-foreground rounded-2xl border border-dashed p-6">
+              No models match these filters.
             </p>
           ) : (
-            <WindowVirtualizer
-              key={s.items.length}
-              ssrCount={Math.min(16, s.items.length)}
-            >
-              {s.items.map((item) =>
-                item.kind === "header" ? (
-                  <button
-                    type="button"
-                    key={`header-${item.vendor}`}
-                    onClick={() => s.toggleVendorCollapsed(item.vendor)}
-                    className="hover:bg-accent/40 flex w-full items-center gap-2 rounded-md px-2 pt-6 pb-3 text-left first:pt-0"
+            <ul className="space-y-3">
+              {rows.map((c) => {
+                const tone = TONE[toTone(c.status)];
+                const perf = perfMap.get(c.name);
+                return (
+                  <li
+                    key={c.id}
+                    className="border-border bg-card rounded-2xl border p-5"
                   >
-                    <Icon
-                      name={
-                        s.collapsedSet.has(item.vendor)
-                          ? "chevron-right"
-                          : "chevron-down"
-                      }
-                      className="text-muted-foreground h-4 w-4 shrink-0"
-                    />
-                    <VendorIcon vendor={item.vendor} size={16} />
-                    <h2 className="min-w-0 truncate font-mono text-sm font-semibold tracking-wide">
-                      {item.vendor}
-                    </h2>
-                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                      {item.count}
-                    </span>
-                    <div className="text-muted-foreground ml-auto flex shrink-0 items-center gap-3 font-mono text-xs">
-                      <StatusCount
-                        icon="circle-check"
-                        count={item.operational}
-                        iconClass="text-emerald-500"
-                      />
-                      <StatusCount
-                        icon="circle-alert"
-                        count={item.degraded}
-                        textClass={
-                          item.degraded > 0
-                            ? "text-amber-700 dark:text-amber-400"
-                            : undefined
-                        }
-                      />
-                      <StatusCount
-                        icon="circle-x"
-                        count={item.down}
-                        textClass={item.down > 0 ? "text-red-500" : undefined}
-                      />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <VendorIcon vendor={s.vendorOf(c.name)} size={18} />
+                      <span className="min-w-0 truncate font-mono text-lg font-semibold">
+                        {c.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "flex items-center gap-1.5 text-sm font-medium",
+                          tone.text,
+                        )}
+                      >
+                        <span className={cn("size-2 rounded-full", tone.dot)} />
+                        {tone.label}
+                      </span>
+                      <span className="text-muted-foreground ml-auto flex items-center gap-4 text-sm tabular-nums">
+                        {perf && perf.request_count > 0 && (
+                          <>
+                            <span title="Average latency, last 24 hours">
+                              {formatLatency(perf.avg_latency_ms, 1)}
+                            </span>
+                            <span title="Average output speed, last 24 hours">
+                              {formatTps(perf.avg_tps, "t/s")}
+                            </span>
+                          </>
+                        )}
+                        <span className="text-foreground font-semibold">
+                          {c.uptime_24h.toFixed(2)}% uptime
+                        </span>
+                      </span>
                     </div>
-                  </button>
-                ) : (
-                  <div key={`row-${item.component.id}`} className="pb-4">
-                    <StatusComponent
-                      variant={
-                        (["success", "degraded", "error"] as const).find(
-                          (v) => v === item.component.status,
-                        ) ?? "success"
-                      }
-                    >
-                      <StatusComponentHeader>
-                        <StatusComponentHeaderLeft>
-                          <StatusComponentIcon />
-                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <StatusComponentTitle>
-                                {item.component.name}
-                              </StatusComponentTitle>
-                              {item.component.description && (
-                                <StatusComponentDescription>
-                                  {item.component.description}
-                                </StatusComponentDescription>
-                              )}
-                            </div>
-                            <PerfStats
-                              perf={perfMap.get(item.component.name)}
-                            />
-                          </div>
-                        </StatusComponentHeaderLeft>
-                        <StatusComponentHeaderRight>
-                          <StatusComponentUptime>
-                            {item.component.uptime_24h.toFixed(2)}%
-                          </StatusComponentUptime>
-                          <StatusComponentStatus />
-                        </StatusComponentHeaderRight>
-                      </StatusComponentHeader>
-                      <StatusComponentBody>
-                        <StatusBar data={s.bars[item.component.name] ?? []} />
-                      </StatusComponentBody>
-                    </StatusComponent>
-                  </div>
-                ),
-              )}
-            </WindowVirtualizer>
+                    <div className="mt-4">
+                      <StatusBar data={s.bars[c.name] ?? []} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
+
+        {env.discordUrl && (
+          <p className="text-muted-foreground mt-10">
+            Incident updates are posted on{" "}
+            <a
+              href={env.discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              our Discord server
+            </a>
+            .
+          </p>
+        )}
       </div>
     </StatusBlocksI18n>
-  );
-}
-
-function FilterPill(props: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <Button
-      variant={props.active ? "default" : "outline"}
-      size="sm"
-      onClick={props.onClick}
-      className="font-mono text-xs"
-    >
-      {props.label}
-    </Button>
-  );
-}
-
-function CollapseAllButton(props: { collapsed: boolean; onClick: () => void }) {
-  const t = useTranslations();
-  const label = props.collapsed
-    ? t("STATUS.FILTER.EXPAND_ALL")
-    : t("STATUS.FILTER.COLLAPSE_ALL");
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={props.onClick}
-      aria-label={label}
-      title={label}
-    >
-      <Icon
-        name={props.collapsed ? "chevrons-up-down" : "chevrons-down-up"}
-        className="h-4 w-4"
-      />
-    </Button>
-  );
-}
-
-function StatusCount(props: {
-  icon: IconName;
-  count: number;
-  iconClass?: string;
-  textClass?: string;
-}) {
-  return (
-    <span className={cn("flex items-center gap-1", props.textClass)}>
-      <Icon name={props.icon} className={cn("h-3.5 w-3.5", props.iconClass)} />
-      {props.count}
-    </span>
-  );
-}
-
-function PerfStats(props: { perf: ModelSummary | undefined }) {
-  const t = useTranslations();
-  if (!props.perf || props.perf.request_count <= 0) return null;
-  return (
-    <div className="text-muted-foreground flex items-center gap-3 font-mono text-[10px] tabular-nums">
-      <span title={t("STATUS.PERF.LATENCY_TOOLTIP")}>
-        {formatLatency(props.perf.avg_latency_ms, 1)}
-      </span>
-      <span title={t("STATUS.PERF.TPS_TOOLTIP")}>
-        {formatTps(props.perf.avg_tps, "t/s")}
-      </span>
-    </div>
   );
 }
