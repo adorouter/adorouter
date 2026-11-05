@@ -17,7 +17,8 @@ export function PageContent(props: {
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 flex-col gap-0 p-4 pb-8 md:p-6 md:pb-10",
+        // AdoRouter: a centred column under the account tabs.
+        "mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-0 px-4 pt-10 pb-16 sm:px-6",
         props.className,
       )}
     >

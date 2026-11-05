@@ -56,10 +56,10 @@ export function AccountStats() {
   ];
 
   return (
-    <div className="border-border border">
+    <div className="border-border overflow-hidden rounded-2xl border">
       <div className="flex flex-wrap items-start justify-between gap-4 p-5">
         <div className="min-w-0">
-          <span className="text-muted-foreground block font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground block text-sm font-medium">
             {t("BILLING.CURRENT_BALANCE")}
           </span>
           {isLoading ? (
@@ -78,7 +78,7 @@ export function AccountStats() {
           )}
         </div>
         <div className="min-w-0 text-right">
-          <span className="text-muted-foreground block font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground block text-sm font-medium">
             {t("BILLING.ACCOUNT")}
           </span>
           {isLoading ? (
@@ -101,7 +101,7 @@ export function AccountStats() {
               {stat.icon}
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-muted-foreground block font-mono text-[10px] tracking-widest uppercase">
+              <span className="text-muted-foreground block text-sm font-medium">
                 {stat.label}
               </span>
               {isLoading ? (

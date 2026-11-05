@@ -119,20 +119,12 @@ export function TokenList() {
 
   return (
     <PageContent>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-            <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
-              {t("TOKEN.TITLE")}
-            </span>
-          </div>
-          <h1 className="text-foreground mt-1 text-xl font-bold tracking-tight md:text-2xl">
+          <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
             {t("TOKEN.TITLE")}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t("TOKEN.DESCRIPTION")}
-          </p>
+          <p className="text-foreground/70 mt-2">{t("TOKEN.DESCRIPTION")}</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} size="sm">
           <Icon name="plus" data-icon="inline-start" className="h-4 w-4" />

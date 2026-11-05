@@ -1,4 +1,9 @@
-import { SidebarLayout } from "@/components/layout/sidebar/sidebar-layout";
+import { ContentBoundary } from "@/components/elements/feedback/content-boundary";
+import { AccountTabs } from "@/components/layout/account/account-tabs";
+import { Footer } from "@/components/layout/nav/footer";
+import { NavAuth } from "@/components/layout/nav/nav-auth";
+import { Navbar } from "@/components/layout/nav/navbar";
+import { TermsAcceptanceGate } from "@/components/pages/auth/terms-acceptance-gate";
 import { AuthRedirectCleanup } from "@/components/provider/app/auth-redirect-cleanup";
 import { APP_VALUES } from "@/lib/config/constants";
 import { rpc } from "@/lib/rpc";
@@ -41,9 +46,23 @@ export default async function DashboardLayout(props: DashboardLayoutProps) {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <SidebarLayout before={<AuthRedirectCleanup />}>
-        {props.children}
-      </SidebarLayout>
+      {/* AdoRouter: the site navbar plus a row of account tabs, instead of
+          unorouter's sidebar shell. Chat keeps the sidebar for its
+          conversation list. */}
+      <AuthRedirectCleanup />
+      <TermsAcceptanceGate />
+      <Navbar authSlot={<NavAuth />} />
+      <div className="bg-background flex flex-1 flex-col pt-14">
+        <AccountTabs />
+        <main className="flex min-w-0 flex-1">
+          <ContentBoundary className="pt-10 pb-24">
+            {props.children}
+          </ContentBoundary>
+        </main>
+      </div>
+      <div className="bg-background">
+        <Footer />
+      </div>
     </HydrationBoundary>
   );
 }

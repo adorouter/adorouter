@@ -54,9 +54,7 @@ function GlanceCard(props: {
     <div className="border-border flex flex-col gap-2 border p-4">
       <div className="text-muted-foreground flex items-center gap-1.5">
         <Icon name={props.icon} className="h-3.5 w-3.5" />
-        <span className="font-mono text-[10px] tracking-widest uppercase">
-          {props.label}
-        </span>
+        <span className="text-sm font-medium">{props.label}</span>
       </div>
       {props.isLoading ? (
         <Skeleton className="h-8 w-28" />
@@ -84,7 +82,7 @@ export function UsageGlance() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-      <div className="border-border bg-card border">
+      <div className="border-border bg-card overflow-hidden rounded-2xl border">
         <div className="border-border border-b p-5">
           <span className="text-foreground block text-sm font-semibold">
             {t("DASHBOARD.PANEL.USAGE_GLANCE")}
@@ -124,9 +122,9 @@ export function UsageGlance() {
         </div>
       </div>
 
-      <div className="border-border bg-card flex flex-col gap-4 border p-5">
+      <div className="border-border bg-card flex flex-col gap-4 rounded-2xl border p-5">
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground text-sm font-medium">
             {t("DASHBOARD.PANEL.CREDIT_REMAINING")}
           </span>
           <span className="flex items-center gap-1.5">

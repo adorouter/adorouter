@@ -23,7 +23,7 @@ export function TokenKeyDisplay(props: TokenKeyDisplayProps) {
     <div>
       <div className="mb-3 flex items-center gap-2">
         <Icon name="key" className="text-muted-foreground h-4 w-4" />
-        <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+        <span className="text-muted-foreground text-sm font-medium">
           {t("TOKEN.TABLE.KEY")}
         </span>
         <Badge

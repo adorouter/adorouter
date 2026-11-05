@@ -128,7 +128,7 @@ function ChartToolbar(props: {
     <div className="border-border flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
         <Icon name="chart-bar" className="text-muted-foreground h-4 w-4" />
-        <span className="text-foreground font-mono text-sm font-medium">
+        <span className="text-foreground font-semibold">
           {t("DASHBOARD.CHART.MODEL_DATA_ANALYSIS")}
         </span>
       </div>
@@ -223,7 +223,7 @@ export function ConsumptionChart() {
   const hasFilters = modelFilter !== ALL_VALUE || groupFilter !== ALL_VALUE;
 
   return (
-    <div className="border-border bg-card flex min-w-0 flex-col border">
+    <div className="border-border bg-card flex min-w-0 flex-col overflow-hidden rounded-2xl border">
       <ChartToolbar
         dashboard={dashboard}
         toolbar={
@@ -308,7 +308,7 @@ export function ConsumptionChart() {
           </div>
 
           <div className="p-5">
-            <div className="text-muted-foreground mb-3 font-mono text-[10px] tracking-widest uppercase">
+            <div className="text-muted-foreground mb-3 text-sm font-medium">
               {t("DASHBOARD.TOTAL")}: ${totalQuota.toFixed(2)}
             </div>
 

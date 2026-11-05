@@ -88,7 +88,7 @@ export function SubscriptionSection() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-muted-foreground block font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground block text-sm font-medium">
             {t("BILLING.SUBSCRIPTION.CURRENT_PLAN")}
           </span>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -232,7 +232,7 @@ export function SubscriptionSection() {
 
       {plans.length > 0 && (
         <div className="space-y-3">
-          <span className="text-muted-foreground block font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground block text-sm font-medium">
             {t("BILLING.SECTIONS.SUBSCRIPTION_PLANS")}
           </span>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

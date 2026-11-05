@@ -15,16 +15,17 @@ import { useTranslations } from "next-intl";
 import ShikiHighlighter from "react-shiki";
 import { toast } from "sonner";
 
-const FALLBACK_MODEL = "claude-opus-4-8";
+// AdoRouter: the first chat model we actually serve, so the example works as
+// pasted. Matches the model used on the home and docs pages.
+const FALLBACK_MODEL = "deepseek-flash";
 
 export function TokenEndpoint() {
   const t = useTranslations();
   const pricing = usePricingVendorsQuery();
   const endpoint = `${env.apiUrl}/v1/chat/completions`;
   const exampleModel =
-    pricing.data?.model_vendors?.find(
-      (m) => m.chat && m.model_name.startsWith("claude-"),
-    )?.model_name ?? FALLBACK_MODEL;
+    pricing.data?.model_vendors?.find((m) => m.chat)?.model_name ??
+    FALLBACK_MODEL;
   const curlExample = `curl ${endpoint} \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -47,7 +48,7 @@ export function TokenEndpoint() {
     <div className="bg-muted/40 mb-6 rounded-lg border p-4">
       <div className="mb-2 flex items-center gap-2">
         <Icon name="link" className="text-muted-foreground h-4 w-4" />
-        <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+        <span className="text-muted-foreground text-sm font-medium">
           {t("TOKEN.ENDPOINT.LABEL")}
         </span>
       </div>
@@ -74,7 +75,7 @@ export function TokenEndpoint() {
 
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground text-sm font-medium">
             {t("TOKEN.ENDPOINT.CURL_EXAMPLE")}
           </span>
           <Button

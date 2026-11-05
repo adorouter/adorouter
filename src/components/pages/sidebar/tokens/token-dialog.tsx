@@ -402,7 +402,7 @@ export function TokenDialog(props: TokenDialogProps) {
 
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.NAME")}
                   </span>
                 </div>
@@ -424,7 +424,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="wallet"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.QUOTA")}
                   </span>
                 </div>
@@ -534,7 +534,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="layers"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.GROUP")}
                   </span>
                 </div>
@@ -561,7 +561,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="brain"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.REASONING")}
                   </span>
                 </div>
@@ -589,7 +589,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="database"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.PROMPT_CACHE")}
                   </span>
                 </div>
@@ -617,7 +617,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="shield"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.MODEL_LIMITS")}
                   </span>
                 </div>
@@ -649,7 +649,7 @@ export function TokenDialog(props: TokenDialogProps) {
                     name="globe"
                     className="text-muted-foreground h-4 w-4"
                   />
-                  <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                  <span className="text-muted-foreground text-sm font-medium">
                     {t("TOKEN.FORM.IP_WHITELIST")}
                   </span>
                 </div>

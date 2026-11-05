@@ -18,14 +18,8 @@ export function SettingsPage() {
 
   return (
     <PageContent>
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
-            {t("SIDEBAR.SETTINGS")}
-          </span>
-        </div>
-        <h1 className="text-foreground mt-1 text-xl font-bold tracking-tight md:text-2xl">
+      <div className="mb-8">
+        <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
           {t("SETTINGS.TITLE")}
         </h1>
       </div>
@@ -33,7 +27,7 @@ export function SettingsPage() {
       <div className="mb-6">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="settings" className="text-muted-foreground h-4 w-4" />
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground text-sm font-medium">
             {t("SETTINGS.ACCOUNT_INFO")}
           </span>
         </div>

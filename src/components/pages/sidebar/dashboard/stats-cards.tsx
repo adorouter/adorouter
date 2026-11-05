@@ -21,9 +21,7 @@ function Tile(props: TileProps) {
     <div className="flex flex-col gap-2 p-5">
       <div className="text-muted-foreground flex items-center gap-1.5">
         <Icon name={props.icon} className="h-3.5 w-3.5" />
-        <span className="font-mono text-[10px] tracking-widest uppercase">
-          {props.label}
-        </span>
+        <span className="text-sm font-medium">{props.label}</span>
       </div>
       {props.isLoading ? (
         <Skeleton className="h-8 w-24" />

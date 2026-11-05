@@ -16,10 +16,10 @@ export function ApiInfoPanel() {
   const apiInfo = status?.api_info ?? [];
 
   return (
-    <div className="border-border bg-card flex flex-col border">
+    <div className="border-border bg-card flex flex-col overflow-hidden rounded-2xl border">
       <div className="border-border flex items-center gap-2 border-b p-5">
         <Icon name="code" className="text-muted-foreground h-4 w-4" />
-        <span className="text-foreground font-mono text-sm font-medium">
+        <span className="text-foreground font-semibold">
           {t("DASHBOARD.PANEL.API_INFORMATION")}
         </span>
       </div>
@@ -33,7 +33,7 @@ export function ApiInfoPanel() {
               <div key={i} className="p-4">
                 {entry.route && (
                   <span
-                    className="block font-mono text-[10px] tracking-widest uppercase"
+                    className="block text-sm font-medium"
                     style={{ color: entry.color || "var(--muted-foreground)" }}
                   >
                     {entry.route}

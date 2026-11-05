@@ -4,6 +4,10 @@ import { PaymentMethodToggle } from "@/components/elements/billing/payment-metho
 import { SectionBoundary } from "@/components/elements/feedback/section-boundary";
 import { PageContent } from "@/components/layout/sidebar/sidebar-layout";
 import { Icon } from "@/components/ui/icon";
+import {
+  PILL_TABS_LIST,
+  PILL_TABS_TRIGGER,
+} from "@/components/layout/account/account-tabs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { env } from "@/lib/config/env";
 import { useTranslations } from "next-intl";
@@ -18,14 +22,8 @@ export function Billing() {
 
   return (
     <PageContent>
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
-            {t("SIDEBAR.BILLING")}
-          </span>
-        </div>
-        <h1 className="text-foreground mt-1 text-xl font-bold tracking-tight md:text-2xl">
+      <div className="mb-8">
+        <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
           {t("BILLING.TITLE")}
         </h1>
       </div>
@@ -37,12 +35,17 @@ export function Billing() {
       </div>
 
       <Tabs defaultValue="buy" className="mb-6">
-        <TabsList>
-          <TabsTrigger value="buy">{t("BILLING.TABS.BUY")}</TabsTrigger>
-          <TabsTrigger value="topup-transactions">
+        <TabsList className={PILL_TABS_LIST}>
+          <TabsTrigger value="buy" className={PILL_TABS_TRIGGER}>
+            {t("BILLING.TABS.BUY")}
+          </TabsTrigger>
+          <TabsTrigger value="topup-transactions" className={PILL_TABS_TRIGGER}>
             {t("BILLING.TABS.TOPUP_TRANSACTIONS")}
           </TabsTrigger>
-          <TabsTrigger value="subscription-transactions">
+          <TabsTrigger
+            value="subscription-transactions"
+            className={PILL_TABS_TRIGGER}
+          >
             {t("BILLING.TABS.SUBSCRIPTION_TRANSACTIONS")}
           </TabsTrigger>
         </TabsList>
@@ -52,9 +55,9 @@ export function Billing() {
             payment-method toggle sat up in the balance card, nowhere near the
             tiles it switches. */}
         <TabsContent value="buy" className="space-y-4">
-          <section className="border-border border">
+          <section className="border-border overflow-hidden rounded-2xl border">
             <header className="border-border flex items-center justify-between border-b px-4 py-3">
-              <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+              <span className="text-muted-foreground text-sm font-medium">
                 {t("BILLING.SECTIONS.SUBSCRIPTION_PLANS")}
               </span>
               <span className="text-muted-foreground/70 text-xs">
@@ -68,10 +71,10 @@ export function Billing() {
             </div>
           </section>
 
-          <section className="border-border border">
+          <section className="border-border overflow-hidden rounded-2xl border">
             <header className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
               <div className="flex items-baseline gap-3">
-                <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                <span className="text-muted-foreground text-sm font-medium">
                   {t("BILLING.SECTIONS.QUOTA_TOPUP")}
                 </span>
                 <span className="text-muted-foreground/70 text-xs">
@@ -87,9 +90,9 @@ export function Billing() {
             </div>
           </section>
 
-          <section className="border-border border">
+          <section className="border-border overflow-hidden rounded-2xl border">
             <header className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-              <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+              <span className="text-muted-foreground text-sm font-medium">
                 {t("BILLING.SECTIONS.REDEEM")}
               </span>
               <span className="text-muted-foreground/70 text-xs">
@@ -120,7 +123,7 @@ export function Billing() {
       <div className="mb-6">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="mail" className="text-muted-foreground h-4 w-4" />
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground text-sm font-medium">
             {t("BILLING.SUPPORT_TITLE")}
           </span>
         </div>

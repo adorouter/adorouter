@@ -48,7 +48,7 @@ export function AnalyticsToolbar(props: AnalyticsToolbarProps) {
           </span>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-56 p-3">
-          <span className="text-muted-foreground mb-2 block font-mono text-[10px] tracking-widest uppercase">
+          <span className="text-muted-foreground mb-2 block text-sm font-medium">
             {t("DASHBOARD.TOOLBAR.CHART_TYPE")}
           </span>
           <div className="grid grid-cols-2 gap-1">
@@ -128,7 +128,7 @@ function FilterSelect(props: {
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+      <span className="text-muted-foreground text-sm font-medium">
         {props.label}
       </span>
       <Select

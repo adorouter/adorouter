@@ -51,19 +51,11 @@ export function Affiliate() {
 
   return (
     <PageContent>
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-          <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
-            {t("AFFILIATE.TITLE")}
-          </span>
-        </div>
-        <h1 className="text-foreground mt-1 text-xl font-bold tracking-tight md:text-2xl">
+      <div className="mb-8">
+        <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
           {t("AFFILIATE.TITLE")}
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t("AFFILIATE.DESCRIPTION")}
-        </p>
+        <p className="text-foreground/70 mt-2">{t("AFFILIATE.DESCRIPTION")}</p>
       </div>
 
       <div className="bg-border mb-6 grid grid-cols-2 gap-px md:grid-cols-5">
@@ -122,7 +114,7 @@ export function Affiliate() {
       {/* Left: How It Works + Invite/Transfer | Right: Badge Generator */}
       <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <div className="border-border border p-5">
+          <div className="border-border rounded-2xl border p-5">
             <span className="text-muted-foreground mb-3 block font-mono text-[10px] font-medium tracking-widest uppercase">
               {t("AFFILIATE.HOW_IT_WORKS")}
             </span>
@@ -212,7 +204,7 @@ export function Affiliate() {
                 </Button>
               </div>
               <div className="mt-3 flex items-center gap-2">
-                <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+                <span className="text-muted-foreground text-sm font-medium">
                   {t("AFFILIATE.YOUR_CODE")}
                 </span>
                 <code className="bg-muted text-foreground px-2 py-0.5 font-mono text-xs">

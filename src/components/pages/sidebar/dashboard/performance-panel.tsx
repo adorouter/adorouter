@@ -51,7 +51,7 @@ export function PerformanceStrip() {
 
   if (summaryQuery.isLoading) {
     return (
-      <div className="border-border bg-card border p-4">
+      <div className="border-border bg-card rounded-2xl border p-4">
         <Skeleton className="h-12 w-full" />
       </div>
     );
@@ -59,7 +59,7 @@ export function PerformanceStrip() {
   if (models.length === 0) return null;
 
   return (
-    <div className="border-border bg-card flex flex-wrap items-center gap-x-6 gap-y-3 border p-4">
+    <div className="border-border bg-card flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border p-4">
       <div className="text-foreground flex items-center gap-1.5">
         <Icon name="heart-pulse" className="h-4 w-4 text-green-500" />
         <span className="text-sm font-semibold">
@@ -118,7 +118,7 @@ function Metric(props: {
   return (
     <div className="flex items-center gap-1.5">
       <Icon name={props.icon} className="text-muted-foreground h-3.5 w-3.5" />
-      <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+      <span className="text-muted-foreground text-sm font-medium">
         {props.label}
       </span>
       <span

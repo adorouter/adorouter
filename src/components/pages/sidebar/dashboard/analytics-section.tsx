@@ -7,7 +7,7 @@ import { StatsCards } from "./stats-cards";
 export function AnalyticsSection() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="border-border bg-card border">
+      <div className="border-border bg-card overflow-hidden rounded-2xl border">
         <StatsCards />
       </div>
       <PerformanceStrip />

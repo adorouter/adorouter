@@ -10,7 +10,7 @@ export function PanelEmpty(props: { icon: IconName; label: string }) {
         name={props.icon}
         className="text-muted-foreground h-8 w-8 opacity-20"
       />
-      <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
+      <span className="text-muted-foreground text-sm font-medium">
         {props.label}
       </span>
     </div>

@@ -14,7 +14,7 @@ type SectionCardProps = {
 
 export function SectionCard(props: SectionCardProps) {
   return (
-    <div className="border-border bg-card flex min-w-0 flex-col border">
+    <div className="border-border bg-card flex min-w-0 flex-col overflow-hidden rounded-2xl border">
       <div className="border-border flex items-start gap-3 border-b p-5">
         {props.icon && (
           <div className="border-border text-muted-foreground flex h-7 w-7 shrink-0 items-center justify-center border">
