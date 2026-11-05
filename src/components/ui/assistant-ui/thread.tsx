@@ -28,14 +28,8 @@ import {
 } from "@/hooks/ai/chat-hook";
 import { useCustomProvidersQuery } from "@/hooks/ai/custom-providers-hook";
 import { useForkConversationMutation } from "@/hooks/ai/rp/conversations";
-import { useAuthQuery } from "@/hooks/auth/auth-hook";
 import { usePricingCatalogQuery } from "@/hooks/models/pricing-hook";
-import {
-  useMessageMeta,
-  useStreamFlag,
-  useLorebookSpeaker,
-  useSpeakingCharacter,
-} from "@/hooks/ui/use-chat-hook";
+import { useMessageMeta, useStreamFlag } from "@/hooks/ui/use-chat-hook";
 import { useHydrated } from "@/hooks/ui/use-hydrated";
 import { useIsMobile } from "@/hooks/ui/use-mobile";
 import {
@@ -53,7 +47,6 @@ import {
   chatModelAtom,
   chatRunningAtom,
   chatStore,
-  chatWebSearchAtom,
   convIdAtom,
   historyLoadedAtom,
   messageEditingAtom,
@@ -77,12 +70,11 @@ import {
   useAuiState,
   type TextMessagePartProps,
 } from "@assistant-ui/react";
-import { NONE_VALUE } from "@/lib/config/constants";
 import { useStorageBlocked } from "@/hooks/ai/use-storage-blocked";
 import { useChatSettingsQuery } from "@/hooks/ai/rp/conversations";
 import { updateLocalConversationSettings } from "@/lib/db/client/data/chat/chat";
 import { logChatDebug } from "@/lib/utils/chat-debug-log";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
@@ -519,28 +511,24 @@ const ThreadWelcome: FC = () => {
   const t = useTranslations();
   return (
     <div className="aui-thread-welcome-root mx-auto my-auto flex w-full max-w-(--thread-max-width) grow flex-col pt-6">
-      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
-            <Icon
-              name="message-circle"
-              className="text-muted-foreground h-8 w-8"
-            />
-          </div>
-          <div className="text-center">
-            <h1 className="text-foreground text-lg font-semibold">
+      {/* AdoRouter: a left-aligned heading instead of unorouter's centred
+          icon bubble. Keep in step with chat-welcome-placeholder.tsx. */}
+      <div className="aui-thread-welcome-center flex w-full grow flex-col justify-center px-2">
+        <div className="flex flex-col items-start gap-4">
+          <div>
+            <h1 className="text-foreground text-3xl font-bold tracking-tight md:text-4xl">
               {t("CHAT.EMPTY_TITLE")}
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-foreground/70 mt-3 text-lg">
               {t("CHAT.EMPTY_DESCRIPTION")}
             </p>
           </div>
           {/* Users assume a web app stores chats server-side, then ask whether
               we read them. Say it up front. */}
-          <div className="border-border/60 bg-muted/40 text-muted-foreground flex max-w-md items-start gap-2 rounded-lg border px-3 py-2 text-xs">
-            <Icon name="shield-check" className="mt-0.5 size-3.5 shrink-0" />
+          <p className="text-muted-foreground flex max-w-lg items-start gap-2 text-sm">
+            <Icon name="shield-check" className="mt-0.5 size-4 shrink-0" />
             <span>{t("CHAT.LOCAL_ONLY_NOTICE")}</span>
-          </div>
+          </p>
           <StorageBlockedNotice />
           {env.discordUrl && (
             <a

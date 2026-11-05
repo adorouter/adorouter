@@ -168,15 +168,28 @@ function ChatSidebarNav(props: { authenticated: boolean; isPartner: boolean }) {
 
   const newThread = () => aui.threads().switchToNewThread();
 
+  // AdoRouter: one New chat button above the conversations, instead of
+  // unorouter's full account menu. The account pages are one click away in
+  // the sidebar footer.
   if (props.authenticated) {
-    const accountItems = sidebarNavigation(props.isPartner);
-    const entries = navigation(true)
-      .filter((item) => item.href === "/chat" || item.href === "/image")
-      .map((item) =>
-        item.href === "/chat" ? { ...item, onClick: newThread } : item,
-      );
-    const items = accountItems.toSpliced(1, 0, ...entries);
-    return <NavGroup label={t("SIDEBAR.MENU")} items={items} />;
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={newThread}
+                tooltip={t("CHAT.NEW_CONVERSATION")}
+                className="bg-primary text-primary-foreground hover:bg-primary/85 hover:text-primary-foreground active:bg-primary/85 active:text-primary-foreground h-10 justify-center rounded-full font-semibold group-data-[collapsible=icon]:rounded-full"
+              >
+                <Icon name="plus" className="size-4" />
+                <span>{t("CHAT.NEW_CONVERSATION")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
   }
 
   const items = navigation(false)

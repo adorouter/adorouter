@@ -1,6 +1,7 @@
 "use client";
 
 import { CompanyName, LogoImage } from "@/components/elements/brand/brand";
+import { Icon } from "@/components/ui/icon";
 import { LanguageToggle } from "@/components/toggle/language-toggle";
 import { ThemeToggle } from "@/components/toggle/theme-toggle";
 import {
@@ -63,6 +64,24 @@ export function AppSidebar(props: AppSidebarProps) {
       )}
       <SidebarFooter className="border-t">
         <SidebarMenu>
+          {(navConfig === "chat" || navConfig === "generate") && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip={t("SIDEBAR.DASHBOARD")}
+                render={
+                  <Link
+                    href="/dashboard"
+                    className="flex w-full items-center gap-2 group-data-[collapsible=icon]:justify-center"
+                  />
+                }
+              >
+                <Icon name="layout-dashboard" className="size-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {t("SIDEBAR.DASHBOARD")}
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip={t("FOOTER.STATUS")}

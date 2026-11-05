@@ -2,7 +2,7 @@
 
 import { VendorIcon } from "@/components/elements/brand/vendor-icon";
 import { Icon } from "@/components/ui/icon";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { modelHref } from "@/lib/utils/base";
 import { formatPriceCompact } from "@/lib/utils/format/number";
 import {
@@ -191,7 +191,6 @@ function CustomProviderItems(props: {
   onPick: (id: string) => void;
 }) {
   const t = useTranslations();
-  const router = useRouter();
   return (
     <CommandGroup heading={t("CHAT.MODEL.CUSTOM_PROVIDERS")}>
       {props.providers.flatMap((provider) =>
@@ -410,7 +409,7 @@ export function ModelSelector(props: ModelSelectorProps) {
       <PopoverTrigger
         data-testid="model-selector-trigger"
         data-model={props.value || undefined}
-        className="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground flex h-8 w-full items-center justify-between rounded-md border px-3 text-xs"
+        className="border-input bg-background ring-offset-background hover:bg-accent hover:text-accent-foreground flex h-9 w-full items-center justify-between rounded-full border px-4 text-sm"
       >
         <div className="flex items-center gap-2 truncate">
           {selected && <VendorIcon vendor={selected.vendor} size={14} />}
