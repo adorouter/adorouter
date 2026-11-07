@@ -2,7 +2,7 @@
 {
   "resources": {
     "paths": {
-      "include": ["./public/i18n/**/*.json"]
+      "include": ["./src/i18n/messages/**/*.json"]
     }
   }
 }

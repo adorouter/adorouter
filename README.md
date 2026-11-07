@@ -22,7 +22,7 @@ src/app/[locale]/(auth|chat|navbar|sidebar|status)   route groups
 src/server/{ai,auth,billing,models,ops}              BFF domains: route.ts -> *.service.ts
 src/lib/ai/chat                                      isomorphic chat engine (runs in the browser)
 src/lib/db/{client,server,schema}                    SQLocal + libSQL, shared schema
-public/i18n                                          locale files
+src/i18n/messages                                    English messages (bundled, not served)
 ```
 
 ## Develop

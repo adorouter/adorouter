@@ -9,7 +9,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
   if (!hasLocale(routing.locales, requested)) notFound();
   const locale = requested;
 
-  const raw = await import(`../../public/i18n/${locale}.json`);
+  const raw = await import(`./messages/${locale}.json`);
 
   return {
     locale,

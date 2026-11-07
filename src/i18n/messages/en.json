@@ -2494,7 +2494,7 @@
     "TERMINATION_TITLE": "8. Termination",
     "TERMINATION_CONTENT": "We may suspend or terminate your account at any time for any reason, including violation of these Terms. Upon termination (except for violations), any remaining unused credits may be refunded at our discretion. You may delete your account at any time in Settings, which ends access to any remaining credits.",
     "IP_TITLE": "9. Intellectual Property",
-    "IP_CONTENT": "All rights in {appName}'s name, logo and content are and will remain the property of {appName}. The software is built on open source projects, including new-api and unorouter, which remain under their own licenses. Our source code is published at github.com/adorouter under the AGPL-3.0 license.",
+    "IP_CONTENT": "All rights in {appName}'s name, logo and content are and will remain the property of {appName}. The software is built on open source projects, including new-api, which remain under their own licenses. Our source code is published at github.com/adorouter under the AGPL-3.0 license.",
     "DISCLAIMER_TITLE": "10. Disclaimer of Warranties",
     "DISCLAIMER_CONTENT": "THE SERVICES ARE PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED. WE DISCLAIM ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE.",
     "LIABILITY_TITLE": "11. Limitation of Liability",

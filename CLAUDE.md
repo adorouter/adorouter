@@ -17,7 +17,7 @@ git worktree remove --force /tmp/uno-build
 
 ## Rules
 
-- Translation keys UPPER_SNAKE nested, `msg()` outside React. `de.d.json.ts` is generated, not a locale.
+- Translation keys UPPER_SNAKE nested, `msg()` outside React. `en.d.json.ts` is generated, not a locale.
 - Dates via the `dayjs` singleton (`src/lib/utils/format/date.ts`), never raw `Date`.
 - Enum-likes are TypeBox `t.Union([t.Literal()])` + derived type. No new TS `enum`; `src/lib/types/enums.ts` is grandfathered.
 - `as`: delete the cast and run `bun typecheck`; still green means it was dead.
@@ -85,7 +85,7 @@ Four guards in `src/lib/db/client/`, each commented at the site with its data-lo
 
 ## i18n and routing
 
-- 18 locales in `public/i18n/`. Messages precompile: `t.raw` unsupported, bad ICU fails the build, missing key throws in dev.
+- AdoRouter: English only, `src/i18n/messages/en.json`. It sits outside `public/` so the raw file (with upstream's unused blog copy) is not served. Messages precompile: `t.raw` unsupported, bad ICU fails the build, missing key throws in dev.
 - `src/proxy.ts` stays thin. Edge cacheability of anonymous pages is decided by Cloudflare rules generated from `pathnames` (sops file above), not headers here. The matcher omits `.js` on purpose, so `.js` files in `public/` 404 (hence `janitor-*.js.txt`).
 - `privateRoutes` in `src/i18n/routing.ts` is the single source for robots Disallow and sitemap exclusion; robots emits end-anchored pairs.
 - SEO dates are static registry data (`GUIDE_DATES`); setup guides are one route over `SETUP_GUIDES`, `DOCS_REGISTRY` derives from it.
