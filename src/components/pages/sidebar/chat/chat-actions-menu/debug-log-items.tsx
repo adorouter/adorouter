@@ -19,7 +19,7 @@ export function DebugLogItems() {
       const stamp = dayjs().format("YYYYMMDD-HHmmss");
       const { downloadDiagnostics } =
         await import("@/lib/db/client/data/diagnostics/db-export");
-      await downloadDiagnostics(`unorouter-diagnostics-${stamp}.json`);
+      await downloadDiagnostics(`adorouter-diagnostics-${stamp}.json`);
     } catch (e) {
       toast.error(String(e).slice(0, 120));
     }

@@ -45,7 +45,7 @@ async function fetchJson<T>(
     const cacheOpts = init?.cache ? {} : THIRTY_DAY_CACHE;
     const res = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "User-Agent": "unorouter-benchmarks", ...init?.headers },
+      headers: { "User-Agent": "adorouter-benchmarks", ...init?.headers },
       ...cacheOpts,
       ...init,
     });

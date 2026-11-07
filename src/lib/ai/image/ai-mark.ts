@@ -8,7 +8,7 @@ const XMP_PACKET =
   '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
   '<rdf:Description rdf:about="" xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:xmp="http://ns.adobe.com/xap/1.0/"' +
   ' Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"' +
-  ' xmp:CreatorTool="UnoRouter"/>' +
+  ' xmp:CreatorTool="AdoRouter"/>' +
   '</rdf:RDF></x:xmpmeta><?xpacket end="w"?>';
 
 const XMP = Buffer.from(XMP_PACKET, "utf8");

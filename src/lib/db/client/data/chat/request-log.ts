@@ -48,7 +48,7 @@ export function buildRequestLogCurl(row: {
     messages.length > 0 ? { model, messages } : row.requestBody,
   );
   const headers = [
-    '-H "Authorization: Bearer $UNOROUTER_API_KEY"',
+    '-H "Authorization: Bearer $ADOROUTER_API_KEY"',
     '-H "Content-Type: application/json"',
   ];
   if (row.requestId) headers.push(`-H "x-request-id: ${row.requestId}"`);

@@ -92,10 +92,10 @@ export async function downloadRawLocalDb(): Promise<boolean> {
   if (!pick) return false;
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   await streamFileToDisk(
-    new File([pick.blob], `unorouter-raw-${stamp}.sqlite`, {
+    new File([pick.blob], `adorouter-raw-${stamp}.sqlite`, {
       type: "application/x-sqlite3",
     }),
-    `unorouter-raw-${stamp}.sqlite`,
+    `adorouter-raw-${stamp}.sqlite`,
   );
   markBackedUp();
   return true;
