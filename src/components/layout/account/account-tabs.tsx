@@ -26,7 +26,7 @@ export function AccountTabs() {
     <div className="bg-background/95 border-border sticky top-14 z-40 border-b backdrop-blur">
       <nav
         aria-label="Account"
-        className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"
+        className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"
       >
         {items.map((item) => {
           const active = isActiveLink(pathname, item.href, item.exact);

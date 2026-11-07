@@ -6,6 +6,9 @@ import { rpc } from "@/lib/rpc";
 import { burnRateWindow } from "@/store/dashboard-store";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
+// AdoRouter: each account page names itself in the tab.
+export const metadata = { title: "Billing · AdoRouter" };
+
 export default async function BillingPage() {
   const queryClient = getQueryClient();
   const burn = burnRateWindow();

@@ -55,7 +55,8 @@ export function BadgeGenerator(props: BadgeGeneratorProps) {
     setTheme(themes.resolvedTheme);
   }
   const [format, setFormat] = useState<BadgeFormat>("svg");
-  const [locale, setLocale] = useState<(typeof LOCALES)[number]>(LOCALES[0]);
+  // AdoRouter: English only, so there is no language picker.
+  const locale = LOCALES[0];
 
   const urlOpts = {
     locale,
@@ -155,30 +156,6 @@ export function BadgeGenerator(props: BadgeGeneratorProps) {
               </Button>
             ))}
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">
-            {t("AFFILIATE.BADGE_GENERATOR.LOCALE")}
-          </span>
-          <Select
-            value={locale}
-            onValueChange={(v) => {
-              const next = LOCALES.find((l) => l === v);
-              if (next) setLocale(next);
-            }}
-          >
-            <SelectTrigger size="sm" className="w-24">
-              <SelectValue>{locale.toUpperCase()}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {LOCALES.map((l) => (
-                <SelectItem key={l} value={l}>
-                  {l.toUpperCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="flex items-center gap-2">

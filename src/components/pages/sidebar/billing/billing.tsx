@@ -9,6 +9,10 @@ import {
   PILL_TABS_TRIGGER,
 } from "@/components/layout/account/account-tabs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  useBillingPlansQuery,
+  useSubscriptionSelfQuery,
+} from "@/hooks/billing/billing-hook";
 import { env } from "@/lib/config/env";
 import { useTranslations } from "next-intl";
 import { AccountStats } from "./account-stats";
@@ -19,6 +23,12 @@ import { TransactionsSection } from "./transactions-section";
 
 export function Billing() {
   const t = useTranslations();
+  // AdoRouter: subscriptions are a later phase. Until a plan exists or the
+  // user has had one, the plans box and its history tab would only be empty.
+  const plans = useBillingPlansQuery().data ?? [];
+  const self = useSubscriptionSelfQuery().data;
+  const showSubscriptions =
+    plans.length > 0 || (self?.all_subscriptions ?? []).length > 0;
 
   return (
     <PageContent>
@@ -42,12 +52,14 @@ export function Billing() {
           <TabsTrigger value="topup-transactions" className={PILL_TABS_TRIGGER}>
             {t("BILLING.TABS.TOPUP_TRANSACTIONS")}
           </TabsTrigger>
-          <TabsTrigger
-            value="subscription-transactions"
-            className={PILL_TABS_TRIGGER}
-          >
-            {t("BILLING.TABS.SUBSCRIPTION_TRANSACTIONS")}
-          </TabsTrigger>
+          {showSubscriptions && (
+            <TabsTrigger
+              value="subscription-transactions"
+              className={PILL_TABS_TRIGGER}
+            >
+              {t("BILLING.TABS.SUBSCRIPTION_TRANSACTIONS")}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Two distinct ways to pay, so each gets its own bordered block with a
@@ -55,21 +67,23 @@ export function Billing() {
             payment-method toggle sat up in the balance card, nowhere near the
             tiles it switches. */}
         <TabsContent value="buy" className="space-y-4">
-          <section className="border-border overflow-hidden rounded-2xl border">
-            <header className="border-border flex items-center justify-between border-b px-4 py-3">
-              <span className="text-muted-foreground text-sm font-medium">
-                {t("BILLING.SECTIONS.SUBSCRIPTION_PLANS")}
-              </span>
-              <span className="text-muted-foreground/70 text-xs">
-                {t("BILLING.SECTIONS.SUBSCRIPTIONS_HINT")}
-              </span>
-            </header>
-            <div className="p-4">
-              <SectionBoundary>
-                <SubscriptionSection />
-              </SectionBoundary>
-            </div>
-          </section>
+          {showSubscriptions && (
+            <section className="border-border overflow-hidden rounded-2xl border">
+              <header className="border-border flex items-center justify-between border-b px-4 py-3">
+                <span className="text-muted-foreground text-sm font-medium">
+                  {t("BILLING.SECTIONS.SUBSCRIPTION_PLANS")}
+                </span>
+                <span className="text-muted-foreground/70 text-xs">
+                  {t("BILLING.SECTIONS.SUBSCRIPTIONS_HINT")}
+                </span>
+              </header>
+              <div className="p-4">
+                <SectionBoundary>
+                  <SubscriptionSection />
+                </SectionBoundary>
+              </div>
+            </section>
+          )}
 
           <section className="border-border overflow-hidden rounded-2xl border">
             <header className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">

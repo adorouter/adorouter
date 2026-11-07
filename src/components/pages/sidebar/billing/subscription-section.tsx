@@ -147,6 +147,7 @@ export function SubscriptionSection() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t("COMMON.REFRESH")}
             onClick={() => {
               selfQuery.refetch();
               plansQuery.refetch();

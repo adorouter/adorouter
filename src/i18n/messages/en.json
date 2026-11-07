@@ -4,7 +4,7 @@
     "DESCRIPTION": "One key for every AI model. Use it in your code, in Claude Code, or in your favorite AI clients. Smart routing across every major provider.",
     "KEYWORDS": "AI API, unified AI endpoint, OpenAI alternative, Claude API, GPT API, Gemini API, DeepSeek API, AI router, AI gateway, multi-model API, OpenAI-compatible API, AI chat client",
     "ACCOUNT": {
-      "TITLE": "{appName} Account",
+      "TITLE": "Account · {appName}",
       "DESC": "Manage your {appName} account, tokens, usage and billing.",
       "KEYWORDS": "{appName} account, api tokens, billing, usage"
     },
@@ -2641,6 +2641,7 @@
   "COMMON": {
     "COPY_CODE": "Copy code",
     "OPEN_MENU": "Open menu",
+    "REFRESH": "Refresh",
     "SEARCH": "Search...",
     "SAVE": "Save",
     "SAVED": "Saved",
@@ -3490,7 +3491,8 @@
       "ACTUAL_PAYMENT": "Actual payment",
       "SAVE": "Save",
       "CUSTOM_AMOUNT": "Custom amount",
-      "PAY": "Pay"
+      "PAY": "Pay",
+      "UNAVAILABLE": "Top-ups are not open yet. Your balance and redemption codes work as usual."
     },
     "ERROR": {
       "PAYMENT_FAILED": "Payment failed. Please try again."
@@ -3513,7 +3515,7 @@
       "PAYPAL": "PayPal"
     },
     "SUPPORT_TITLE": "Need help?",
-    "SUPPORT_TEXT": "Questions about billing or your account? Email us at {supportEmail} and we will respond within one business day.",
+    "SUPPORT_TEXT": "Questions about billing or your account? Email us at {supportEmail}. We answer refund and payment requests within 3 business days.",
     "TRANSACTIONS": {
       "DATE": "Date",
       "DESCRIPTION": "Description",
@@ -3737,7 +3739,7 @@
     },
     "BACKUP": {
       "TITLE": "Data and backups",
-      "DESCRIPTION": "Your chats, characters, lorebooks and presets live only in this browser. These settings apply to this browser only.",
+      "DESCRIPTION": "Your chats live only in this browser. These settings apply to this browser only.",
       "LAST_BACKUP": "Last backup",
       "PERSISTENT": "Protected storage",
       "PERSISTENT_YES": "Granted. The browser will not clear your data on its own when space runs low.",
@@ -4186,7 +4188,7 @@
       "PHOTOREALISTIC": "Photorealistic",
       "CINEMATIC": "Cinematic"
     },
-    "DISCORD_CTA": "Need a preset or stuck? Ask on Discord",
+    "DISCORD_CTA": "Stuck? Ask on Discord",
     "TRUNCATED_BEFORE_TEXT": "The output limit was reached while the model was still thinking, so no reply was written. Raise max tokens or turn off reasoning for this model.",
     "LOCAL_ONLY_NOTICE": "Your chats are saved on this device. We keep no copy, so back them up yourself.",
     "DB_HELD": "Another tab, or a page that just closed, still holds the local database, so chats cannot load. Close other AdoRouter tabs, or quit and reopen the browser, then try again.",

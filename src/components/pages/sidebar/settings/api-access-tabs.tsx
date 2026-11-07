@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthQuery } from "@/hooks/auth/auth-hook";
 import { useGenerateAccessTokenMutation } from "@/hooks/auth/settings-hook";
+import { usePricingVendorsQuery } from "@/hooks/models/pricing-hook";
 import { env } from "@/lib/config/env";
 import { copyToClipboard } from "@/lib/utils/base";
 import { useTranslations } from "next-intl";
@@ -14,6 +15,8 @@ import { toast } from "sonner";
 // Stands in for the real token in the examples until one is generated, so the
 // snippets read as runnable commands rather than as a template to fill in.
 const TOKEN_PLACEHOLDER = "YOUR_ACCESS_TOKEN";
+// AdoRouter: same rule as the API Keys page, a chat model we actually serve.
+const FALLBACK_MODEL = "deepseek-flash";
 
 function CopyRow(props: { value: string; onCopy: () => void; label: string }) {
   return (
@@ -33,6 +36,10 @@ export function ApiAccessTabs() {
   const t = useTranslations();
   const authQuery = useAuthQuery();
   const generateTokenMutation = useGenerateAccessTokenMutation();
+  const pricing = usePricingVendorsQuery();
+  const exampleModel =
+    pricing.data?.model_vendors?.find((m) => m.chat)?.model_name ??
+    FALLBACK_MODEL;
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const userId = authQuery.data?.id;
@@ -94,28 +101,11 @@ export function ApiAccessTabs() {
   -H "Authorization: Bearer sk-YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "claude-sonnet-5-thinking",
+    "model": "${exampleModel}",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'`,
     },
-    // Decision models (TypeSafe Jev) answer typed questions over a shared state
-    // and never speak chat, so they have their own route.
-    {
-      key: "decisions",
-      title: t("SETTINGS.SECURITY.EXAMPLE_DECISIONS"),
-      command: `curl "${env.apiUrl}/v1/decisions" \\
-  -H "Authorization: Bearer sk-YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "jev-1.13",
-    "state": {"ticket": "Payment failed twice, customer asks for a refund."},
-    "questions": {
-      "refund": {"type": "noul", "instructions": "Should we refund?"},
-      "team": {"type": "choice", "instructions": "Which team handles it?", "criteria": {"billing": null, "support": null}},
-      "urgency": {"type": "score", "instructions": "How urgent is it?", "criteria": ["Low", "Medium", "High"]}
-    }
-  }'`,
-    },
+    // AdoRouter: no decisions example. Text chat models only for now.
     // The partner routes identify the caller by token; the user_id in a grant is
     // the RECIPIENT, which is why an account needs to be able to read its own.
     ...(isPartner

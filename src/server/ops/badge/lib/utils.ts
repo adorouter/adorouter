@@ -255,6 +255,7 @@ function namespaceSvgIds(svg: string, ns: string): string {
 const LOGO_VIEWBOX = 250;
 
 function inlineLogoImage(svg: string, staticMode?: boolean): string {
+  if (!logoInnerSvg) return svg;
   const href = logoDataUri;
   const re = new RegExp(
     `<image\\s+([^>]*?)href="${escapeRegex(href)}"([^>]*?)/?>`,

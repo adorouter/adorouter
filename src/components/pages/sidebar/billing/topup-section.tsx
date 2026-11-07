@@ -103,6 +103,7 @@ function TopUpTile(props: {
 }
 
 export function TopUpSection() {
+  const t = useTranslations();
   const billing = useBillingActions();
   const topUpInfo = billing.topUpInfo;
 
@@ -113,24 +114,32 @@ export function TopUpSection() {
       .filter((p) => p.price > 0)
       .sort((a, b) => a.price - b.price)[0]?.productId ?? "";
 
-  if (
-    !billing.enableStripe &&
-    !billing.enableCreem &&
-    !billing.enableNowPayments &&
-    !billing.enableDeloPay
-  )
-    return null;
+  // Still loading: render nothing rather than flash the "not open" note.
+  if (!topUpInfo) return null;
 
   const showCrypto =
     billing.paymentMethod === "crypto" && billing.enableNowPayments;
   const showPayPal =
     billing.paymentMethod === "paypal" && billing.enableDeloPay;
   const showCard = billing.paymentMethod === "card" && billing.enableCard;
+  const showStripe =
+    showCard && billing.enableStripe && amountOptions.length > 0;
+  const showCreem = showCard && billing.enableCreem && creemProducts.length > 0;
   const grid = "grid grid-cols-2 gap-3 md:grid-cols-4";
+
+  // AdoRouter: with no payment method switched on (Creem not live yet) the
+  // card used to render empty. Say so instead.
+  if (!showStripe && !showCreem && !showCrypto && !showPayPal) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        {t("BILLING.TOPUP.UNAVAILABLE")}
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {showCard && billing.enableStripe && amountOptions.length > 0 && (
+      {showStripe && (
         <div className={grid}>
           {amountOptions.map((amount) => (
             <TopUpTile
@@ -145,7 +154,7 @@ export function TopUpSection() {
         </div>
       )}
 
-      {showCard && billing.enableCreem && creemProducts.length > 0 && (
+      {showCreem && (
         <div className="space-y-3">
           <div className={grid}>
             {creemProducts.map((product, index) => (

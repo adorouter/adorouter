@@ -5,6 +5,9 @@ import { queryKeys } from "@/lib/react-query/keys";
 import { rpc } from "@/lib/rpc";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
+// AdoRouter: each account page names itself in the tab.
+export const metadata = { title: "Settings · AdoRouter" };
+
 export default async function SettingsPageRoute() {
   const queryClient = getQueryClient();
 

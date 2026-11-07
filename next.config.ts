@@ -203,7 +203,9 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin({
   experimental: {
-    createMessagesDeclaration: ["./src/i18n/messages/en.json"],
+    // AdoRouter: no createMessagesDeclaration. Upstream generated it from de.json,
+    // which nothing imported; generated next to en.json it shadows the JSON that
+    // next-intl.d.ts types against and breaks the typecheck.
     // Precompile ICU messages to ASTs at build: ~9-15KB less JS per page and
     // invalid keys fail the build instead of erroring at render. No t.raw
     // anywhere in the repo (unsupported with precompilation).

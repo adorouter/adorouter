@@ -143,6 +143,7 @@ function ChartToolbar(props: {
         <Button
           variant="ghost"
           size="icon-sm"
+          aria-label={t("COMMON.REFRESH")}
           onClick={() => {
             dashboard.refetchAll();
           }}

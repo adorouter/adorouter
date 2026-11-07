@@ -1,3 +1,4 @@
+import messages from "@/i18n/messages/en.json";
 import { LOCALES } from "@/lib/config/constants";
 import { readFileSync } from "fs";
 import type { Locale } from "next-intl";
@@ -5,15 +6,17 @@ import { join } from "path";
 import type { SatoriOptions } from "satori";
 import { createTranslator } from "use-intl/core";
 
-const logoSvg = readFileSync(
-  join(process.cwd(), "public", "images", "logo", "logo.svg"),
-  "utf-8",
+// AdoRouter: the badge logo is the PNG app icon. logo.svg draws its "A" as
+// <text> in Georgia, which the badge renderer has no font for, and the inliner
+// below in utils.ts assumed upstream's 250-unit logo. With no inner SVG the
+// PNG stays embedded as an image.
+const logoPng = readFileSync(
+  join(process.cwd(), "public", "images", "icons", "icon-192.png"),
 );
 
-export const logoDataUri = `data:image/svg+xml;base64,${Buffer.from(logoSvg).toString("base64")}`;
+export const logoDataUri = `data:image/png;base64,${logoPng.toString("base64")}`;
 
-export const logoInnerSvg =
-  logoSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/)?.[1].trim() ?? "";
+export const logoInnerSvg = "";
 
 const fontsDir = join(process.cwd(), "src", "server", "ops", "badge", "fonts");
 
@@ -38,28 +41,17 @@ export const fonts: SatoriOptions["fonts"] = [
   },
 ];
 
-const translatorCache = new Map<Locale, ReturnType<typeof createTranslator>>();
+// AdoRouter: English only. The messages are imported into the bundle rather
+// than read from disk, since they no longer sit in public/. Every locale
+// renders in English.
+const translator = createTranslator({ locale: LOCALES[0], messages });
+// Badge keys are built at runtime; an unknown one falls back to the key below.
+type MessageKey = Parameters<typeof translator>[0];
 
-function getTranslator(locale: Locale) {
-  const cached = translatorCache.get(locale);
-  if (cached) return cached;
-
-  const path = join(process.cwd(), "public", "i18n", `${locale}.json`);
-  const messages = JSON.parse(readFileSync(path, "utf-8"));
-  const translator = createTranslator({ locale, messages });
-  translatorCache.set(locale, translator);
-  return translator;
-}
-
-export function t(locale: Locale, key: string): string {
-  const translator = getTranslator(locale);
+export function t(_locale: Locale, key: string): string {
   try {
-    return translator(key);
+    return translator(key as MessageKey);
   } catch {
-    if (locale !== LOCALES[0]) {
-      const en = getTranslator(LOCALES[0]);
-      return en(key);
-    }
     return key;
   }
 }

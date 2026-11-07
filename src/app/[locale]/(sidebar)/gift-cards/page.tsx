@@ -13,6 +13,9 @@ import type { DataTableStores } from "@/store/data-table-store";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { cookies } from "next/headers";
 
+// AdoRouter: each account page names itself in the tab.
+export const metadata = { title: "Gift Cards · AdoRouter" };
+
 export default async function GiftCardsPage() {
   const queryClient = getQueryClient();
   const cookie = await cookies();
