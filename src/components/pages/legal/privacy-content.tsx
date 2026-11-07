@@ -29,7 +29,7 @@ const SECTIONS: LegalDocSection[] = [
   { title: "CHILDREN_TITLE", para: { key: "CHILDREN_CONTENT", values: true } },
   {
     title: "TRANSFERS_TITLE",
-    para: { key: "TRANSFERS_CONTENT" },
+    para: { key: "TRANSFERS_CONTENT", values: true },
     outro: { key: "TRANSFERS_EMAIL" },
   },
   { title: "CHANGES_TITLE", para: { key: "CHANGES_CONTENT" } },

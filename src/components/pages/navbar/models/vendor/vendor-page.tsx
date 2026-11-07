@@ -49,7 +49,7 @@ export function VendorModelsPage(props: { vendor: string }) {
       <div className="mt-10">
         {models.length === 0 ? (
           query.isPending ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
@@ -65,7 +65,7 @@ export function VendorModelsPage(props: { vendor: string }) {
         ) : (
           <>
             {live.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {live.map((model) => (
                   <ModelGridCard key={model.model_name} model={model} link />
                 ))}
@@ -80,7 +80,7 @@ export function VendorModelsPage(props: { vendor: string }) {
                 <p className="text-muted-foreground mt-1 mb-5">
                   {t("MODELS.VENDOR.AT_CAPACITY_NOTE")}
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {busy.map((model) => (
                     <ModelGridCard key={model.model_name} model={model} link />
                   ))}
