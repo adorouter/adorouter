@@ -26,7 +26,9 @@ export function AccountTabs() {
     <div className="bg-background/95 border-border sticky top-14 z-40 border-b backdrop-blur">
       <nav
         aria-label="Account"
-        className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"
+        // Sideways only: a row that can also scroll up and down drags the tabs
+        // out of line on phones.
+        className="no-scrollbar mx-auto flex max-w-7xl touch-pan-x gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 sm:px-6"
       >
         {items.map((item) => {
           const active = isActiveLink(pathname, item.href, item.exact);
@@ -36,7 +38,7 @@ export function AccountTabs() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "-mb-px shrink-0 border-b-2 px-3 py-3 text-[15px] font-medium whitespace-nowrap transition-colors",
+                "shrink-0 border-b-2 px-3 py-3 text-[15px] font-medium whitespace-nowrap transition-colors",
                 active
                   ? "border-primary text-foreground"
                   : "text-foreground/70 hover:text-foreground border-transparent",
@@ -53,7 +55,9 @@ export function AccountTabs() {
 
 // Pill styling for in-page <Tabs> on account pages, matching the chips on the
 // public pages. Pass to TabsList / TabsTrigger as className.
+// The base list pins a horizontal height (group-data-horizontal/tabs:h-9),
+// which beats a plain h-auto, so wrapped pills spilled over the next block.
 export const PILL_TABS_LIST =
-  "h-auto flex-wrap justify-start gap-2 bg-transparent p-0";
+  "h-auto group-data-horizontal/tabs:h-auto flex-wrap justify-start gap-2 bg-transparent p-0";
 export const PILL_TABS_TRIGGER =
   "border-border text-foreground/80 hover:border-foreground/40 h-auto flex-none rounded-full px-4 py-1.5 after:hidden data-active:border-foreground data-active:bg-foreground data-active:text-background dark:data-active:border-foreground dark:data-active:bg-foreground dark:data-active:text-background";
