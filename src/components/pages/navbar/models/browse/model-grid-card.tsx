@@ -8,12 +8,14 @@ import {
   inputPriceUnit,
   modelPriceColumns,
   outputPriceUnit,
+  type PriceUnit,
 } from "@/lib/api/model-modality";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { modelHref } from "@/lib/utils/base";
 import {
   bestDiscountPercent,
+  discountPercent,
   formatLatency,
   formatPct,
   formatTokenCount,
@@ -31,7 +33,12 @@ function rateTone(value: number) {
 const titleClass =
   "text-foreground min-w-0 truncate text-left font-mono text-lg font-semibold after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none";
 
-function Stat(props: { label: string; value?: string; tone?: string }) {
+function Stat(props: {
+  label: string;
+  value?: string;
+  tone?: string;
+  original?: string;
+}) {
   return (
     <div className="min-w-0 px-3 py-2.5">
       <dt className="text-muted-foreground font-mono text-[11px] tracking-widest uppercase">
@@ -39,16 +46,34 @@ function Stat(props: { label: string; value?: string; tone?: string }) {
       </dt>
       <dd
         className={cn(
-          "mt-0.5 truncate text-base font-semibold tabular-nums",
+          "mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-base font-semibold tabular-nums",
           props.value
             ? (props.tone ?? "text-foreground")
             : "text-muted-foreground",
         )}
       >
-        {props.value ?? "-"}
+        <span className="truncate">{props.value ?? "-"}</span>
+        {props.original && (
+          <span className="text-muted-foreground truncate text-xs font-normal line-through">
+            {props.original}
+          </span>
+        )}
       </dd>
     </div>
   );
+}
+
+// AdoRouter: the official list price, struck through, when the model's
+// cheapest lane is below it (ShowOriginalPriceEnabled fills the original_*
+// fields). The table and model page already showed it; the card did not.
+function listPrice(
+  value: number,
+  original: number | null,
+  unit: PriceUnit,
+  perCall?: boolean,
+) {
+  if (original === null || discountPercent(value, original) <= 0) return;
+  return fmtUnit(original, unit, perCall);
 }
 
 // One card per model. The title is a stretched button (or, with `link`, a
@@ -65,6 +90,8 @@ export function ModelGridCard(props: {
   const model = props.model;
   const modality = deriveOutputModality(model);
   const price = modelPriceColumns(model);
+  const inUnit = inputPriceUnit(modality, model.is_fixed_price);
+  const outUnit = outputPriceUnit(modality, model.is_fixed_price);
   const ctx = model.metadata?.contextWindow ?? model.metadata?.maxInputTokens;
   const discount = bestDiscountPercent(model);
   const uptime = model.uptime_24h ?? undefined;
@@ -125,17 +152,21 @@ export function ModelGridCard(props: {
         <dl className="border-border [&>div]:border-border grid grid-cols-3 border-t [&>div]:border-b [&>div:not(:nth-child(3n+1))]:border-l [&>div:nth-child(3n+1)]:pl-0 [&>div:nth-child(n+4)]:border-b-0">
           <Stat
             label="Input"
-            value={fmtUnit(
+            value={fmtUnit(price.input, inUnit, model.is_fixed_price)}
+            original={listPrice(
               price.input,
-              inputPriceUnit(modality, model.is_fixed_price),
+              price.originalInput,
+              inUnit,
               model.is_fixed_price,
             )}
           />
           <Stat
             label="Output"
-            value={fmtUnit(
+            value={fmtUnit(price.output, outUnit, model.is_fixed_price)}
+            original={listPrice(
               price.output,
-              outputPriceUnit(modality, model.is_fixed_price),
+              price.originalOutput,
+              outUnit,
               model.is_fixed_price,
             )}
           />
