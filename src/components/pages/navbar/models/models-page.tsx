@@ -12,6 +12,7 @@ import { clearFiltersAtom, isDirtyAtom } from "@/store/models-store";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import { ModelGridCard } from "./browse/model-grid-card";
 import { ModelsEmpty } from "./browse/models-empty";
 import { SearchBox } from "./browse/models-toolbar";
@@ -39,7 +40,9 @@ const MODALITY_LABEL_KEY = {
 
 // A header, modality chips and a card grid, rather than unorouter's filter
 // sidebar and table. With a small catalog the sidebar's filters sat empty.
-export function ModelsPage() {
+// `providers` is the server-rendered "browse by provider" row, shown under the
+// header so visitors can jump to a maker before scrolling the grid.
+export function ModelsPage(props: { providers?: ReactNode }) {
   const t = useTranslations();
   const m = useModelsFilter();
   const clearFilters = useSetAtom(clearFiltersAtom);
@@ -63,6 +66,8 @@ export function ModelsPage() {
         </h1>
         <SearchBox className="relative w-full md:w-80" />
       </header>
+
+      {props.providers}
 
       {chips.length > 1 && (
         <div className="mt-8 flex flex-wrap gap-2">

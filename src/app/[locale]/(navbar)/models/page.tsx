@@ -32,6 +32,38 @@ export default async function Page(props: {
   const t = await getTranslations({ locale });
   const data = await getModelsPageData().catch(() => emptyPageData());
   const topModels = data.topModels;
+  const vendors = data.vendorNames.filter((vendor) => vendorSlug(vendor));
+
+  // Rendered here, on the server, and placed under the page header by
+  // ModelsPage, so the links are in the HTML crawlers read.
+  const providers =
+    vendors.length > 0 ? (
+      <section aria-labelledby="browse-by-provider" className="mt-8">
+        <h2
+          id="browse-by-provider"
+          className="text-foreground mb-3 text-lg font-semibold"
+        >
+          {t("MODELS.VENDOR.BROWSE_ALL")}
+        </h2>
+        <ul className="flex flex-wrap gap-2">
+          {vendors.map((vendor) => (
+            <li key={vendor}>
+              <Link
+                href={{
+                  pathname: "/models/[...slug]",
+                  params: { slug: [vendorSlug(vendor)] },
+                }}
+                prefetch={false}
+                className="text-foreground/80 hover:text-foreground hover:border-foreground/40 border-border inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors"
+              >
+                <VendorIcon vendor={vendor} size={16} />
+                {vendor}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : null;
 
   return (
     <>
@@ -63,37 +95,8 @@ export default async function Page(props: {
         })}
       />
       <HydrationBoundary state={data.dehydrated}>
-        <ModelsPage />
+        <ModelsPage providers={providers} />
       </HydrationBoundary>
-
-      {data.vendorNames.length > 0 && (
-        <section className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6">
-          <div className="border-border border-t pt-8">
-            <h2 className="text-foreground mb-4 text-lg font-semibold">
-              {t("MODELS.VENDOR.BROWSE_ALL")}
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {data.vendorNames
-                .filter((vendor) => vendorSlug(vendor))
-                .map((vendor) => (
-                  <li key={vendor}>
-                    <Link
-                      href={{
-                        pathname: "/models/[...slug]",
-                        params: { slug: [vendorSlug(vendor)] },
-                      }}
-                      prefetch={false}
-                      className="text-foreground/80 hover:text-foreground hover:border-foreground/40 border-border inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors"
-                    >
-                      <VendorIcon vendor={vendor} size={16} />
-                      {vendor}
-                    </Link>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        </section>
-      )}
     </>
   );
 }
