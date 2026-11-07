@@ -2803,6 +2803,11 @@
     "LOG_OUT": "Log Out",
     "SUBSCRIPTION": "Subscription",
     "SUBSCRIPTION_ACTIVE": "Active",
+    "MENU": {
+      "BALANCE": "Balance",
+      "TOP_UP": "Top up",
+      "LOG_OUT": "Log out"
+    },
     "FORGOT_PASSWORD": {
       "LINK": "Forgot password?",
       "TITLE": "Reset Password",
