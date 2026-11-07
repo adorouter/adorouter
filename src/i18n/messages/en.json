@@ -3302,6 +3302,7 @@
     "COPY_TO_LIGHT": "Copy to light",
     "REDO": "Redo",
     "CUSTOMIZE": "Customize theme...",
+    "APPEARANCE": "Appearance",
     "SHUFFLE": "Shuffle",
     "IMPORT": "Import",
     "EXPORT": "Export",
@@ -6235,6 +6236,7 @@
     }
   },
   "NOTIFY": {
+    "TITLE": "Notifications",
     "BELL_LABEL": "Notifications",
     "EMPTY": "No notifications this session",
     "EMPTY_HINT": "Watch a model to get alerts about price changes and availability.",

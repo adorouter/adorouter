@@ -152,11 +152,21 @@ export function NotifyBell() {
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
+      {/* AdoRouter: our own layout (2026-11-07), matching the account menu:
+          a titled header with pill tabs, rounded rows, and the switches
+          grouped in bordered cards. Upstream had full-width tabs over plain rows. */}
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl p-0"
+      >
         <Tabs defaultValue="inbox" className="gap-0">
-          <div className="border-border border-b p-2">
-            <TabsList className="w-full">
-              <TabsTrigger value="inbox" className="text-xs">
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
+            <p className="text-muted-foreground font-mono text-[11px] tracking-widest uppercase">
+              {t("NOTIFY.TITLE")}
+            </p>
+            <TabsList className="bg-muted/50 rounded-full p-0.5 group-data-horizontal/tabs:h-8">
+              <TabsTrigger value="inbox" className="rounded-full px-3 text-xs">
                 {t("NOTIFY.TAB_INBOX")}
                 {unread > 0 && (
                   <span className="bg-primary text-primary-foreground flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold">
@@ -164,16 +174,21 @@ export function NotifyBell() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="watched" className="text-xs">
+              <TabsTrigger
+                value="watched"
+                className="rounded-full px-3 text-xs"
+              >
                 {t("NOTIFY.TAB_WATCHED")}
-                <span className="text-muted-foreground">({topics.length})</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {topics.length}
+                </span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="inbox">
             {notifications.length > 0 && (
-              <div className="border-border flex justify-end border-b px-3 py-1.5">
+              <div className="-mt-1 flex justify-end px-4 pb-1.5">
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground text-xs transition-colors"
@@ -183,13 +198,16 @@ export function NotifyBell() {
                 </button>
               </div>
             )}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto pb-2">
               {notifications.length === 0 ? (
-                <div className="px-3 py-8 text-center">
-                  <p className="text-muted-foreground text-sm">
+                <div className="border-border/60 mx-3 mb-1 flex flex-col items-center rounded-xl border border-dashed px-4 py-7 text-center">
+                  <span className="bg-muted/60 text-muted-foreground mb-3 flex size-9 items-center justify-center rounded-xl">
+                    <Icon name="bell" className="h-4 w-4" />
+                  </span>
+                  <p className="text-foreground text-sm font-medium">
                     {t("NOTIFY.EMPTY")}
                   </p>
-                  <p className="text-muted-foreground/70 mt-1 text-xs">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {t("NOTIFY.EMPTY_HINT")}
                   </p>
                 </div>
@@ -201,7 +219,7 @@ export function NotifyBell() {
                     <div
                       key={n.id}
                       className={cn(
-                        "hover:bg-muted/50 flex w-full items-start gap-2.5 px-3 py-2 transition-colors",
+                        "hover:bg-muted/50 mx-2 flex items-start gap-2.5 rounded-xl px-2.5 py-2 transition-colors",
                         !n.read && "bg-primary/5",
                       )}
                     >
@@ -244,7 +262,7 @@ export function NotifyBell() {
           </TabsContent>
 
           <TabsContent value="watched">
-            <div className="p-3">
+            <div className="px-3 pb-3">
               <div className="flex items-center gap-1.5">
                 <input
                   type="text"
@@ -254,13 +272,13 @@ export function NotifyBell() {
                     if (e.key === "Enter") addWatch();
                   }}
                   placeholder={t("NOTIFY.ADD_MODEL_PLACEHOLDER")}
-                  className="border-border/60 bg-muted/30 placeholder:text-muted-foreground/60 focus:border-primary/50 h-7 min-w-0 flex-1 rounded border px-2 font-mono text-xs outline-none"
+                  className="border-border/60 bg-muted/30 placeholder:text-muted-foreground/60 focus:border-primary/50 h-9 min-w-0 flex-1 rounded-full border px-3.5 font-mono text-xs outline-none"
                 />
                 <button
                   type="button"
                   aria-label={t("NOTIFY.WATCH")}
                   disabled={!rawValid}
-                  className="border-border/60 text-muted-foreground hover:text-primary hover:border-primary/50 flex h-7 w-7 shrink-0 items-center justify-center rounded border transition-colors disabled:pointer-events-none disabled:opacity-40"
+                  className="border-border/60 text-muted-foreground hover:text-primary hover:border-primary/50 flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => addWatch()}
                 >
                   <Icon name="plus" className="h-3.5 w-3.5" />
@@ -275,7 +293,7 @@ export function NotifyBell() {
                     return (
                       <div
                         key={model}
-                        className="hover:bg-muted/40 flex items-center gap-2 rounded py-1"
+                        className="hover:bg-muted/40 flex items-center gap-2 rounded-lg px-2 py-1.5"
                       >
                         <button
                           type="button"
@@ -322,31 +340,33 @@ export function NotifyBell() {
                 </div>
               )}
             </div>
-            <div className="border-border flex items-center justify-between border-t px-3 py-2">
-              <span className="text-muted-foreground text-xs">
-                {t("NOTIFY.WATCH_FREE_MODELS")}
-              </span>
-              <Switch
-                checked={freeWatch.watched}
-                onCheckedChange={() => freeWatch.toggle()}
-              />
-            </div>
-            <div className="border-border flex items-center justify-between border-t px-3 py-2">
-              <span className="text-muted-foreground text-xs">
-                {t("NOTIFY.SOUND")}
-              </span>
-              <Switch
-                checked={soundEnabled}
-                onCheckedChange={(next) => {
-                  setSoundEnabled(next);
-                  if (next) playNotifySound();
-                }}
-              />
+            <div className="border-border mx-3 mb-2 divide-y rounded-xl border">
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground text-xs">
+                  {t("NOTIFY.WATCH_FREE_MODELS")}
+                </span>
+                <Switch
+                  checked={freeWatch.watched}
+                  onCheckedChange={() => freeWatch.toggle()}
+                />
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground text-xs">
+                  {t("NOTIFY.SOUND")}
+                </span>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={(next) => {
+                    setSoundEnabled(next);
+                    if (next) playNotifySound();
+                  }}
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
         {pushAvailableHere() && (
-          <div className="border-border flex items-center justify-between border-t px-3 py-2">
+          <div className="border-border mx-3 mb-3 flex items-center justify-between rounded-xl border px-3 py-2.5">
             {permission === "denied" ? (
               <span className="text-muted-foreground/70 text-xs">
                 {t("NOTIFY.PUSH_BLOCKED")}
