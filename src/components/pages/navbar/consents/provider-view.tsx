@@ -121,9 +121,12 @@ export function ProviderView(props: {
   );
 
   return (
+    // AdoRouter: clipped on x. This page is centred, so the closed offcanvas
+    // filter panel, parked one panel width to the left, showed in the margin.
+    // Clip (not hidden) keeps the sticky panel working.
     <SidebarProvider
       defaultOpen={false}
-      className="relative h-auto min-h-0 overflow-visible"
+      className="relative h-auto min-h-0 overflow-x-clip overflow-y-visible"
     >
       <ProviderFilterSidebar providers={providers} filters={filters} />
       <SidebarInset className="@container max-h-none! min-w-0 overflow-visible bg-transparent px-4 md:px-6">

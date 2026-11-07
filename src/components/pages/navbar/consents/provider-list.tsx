@@ -50,6 +50,9 @@ export function ProviderList(props: {
             provider={provider}
             handlers={props.handlers}
             selection={props.selection}
+            // AdoRouter: one provider can hold every lane (a marketplace), so a
+            // lone row opens to show its models instead of reading as one item.
+            defaultOpen={props.providers.length === 1}
           />
         ))}
       </div>

@@ -78,9 +78,12 @@ export function ModelView(props: {
   );
 
   return (
+    // AdoRouter: clipped on x. This page is centred, so the closed offcanvas
+    // filter panel, parked one panel width to the left, showed in the margin.
+    // Clip (not hidden) keeps the sticky panel working.
     <SidebarProvider
       defaultOpen={false}
-      className="relative h-auto min-h-0 overflow-visible"
+      className="relative h-auto min-h-0 overflow-x-clip overflow-y-visible"
     >
       <ConsentFilterSidebar rows={rows} filters={filters} />
 

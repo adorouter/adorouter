@@ -25,9 +25,11 @@ export function ProviderCard(props: {
   provider: ProviderRow;
   handlers: ProviderHandlers;
   selection?: ProviderSelection;
+  defaultOpen?: boolean;
 }) {
   return (
     <Collapsible
+      defaultOpen={props.defaultOpen}
       className={cn(
         "border-border bg-card rounded-2xl border p-5",
         !props.provider.active && "opacity-60",
