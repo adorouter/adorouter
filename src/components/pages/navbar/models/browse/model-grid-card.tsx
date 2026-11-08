@@ -24,7 +24,7 @@ import type { PricingCatalogModel } from "@/openapi";
 import { useLocale } from "next-intl";
 
 // Same thresholds the old table used for uptime and success rate.
-function rateTone(value: number) {
+export function rateTone(value: number) {
   if (value >= 99) return "text-emerald-400";
   if (value >= 90) return "text-amber-400";
   return "text-red-400";
@@ -33,7 +33,7 @@ function rateTone(value: number) {
 const titleClass =
   "text-foreground min-w-0 truncate text-left font-mono text-lg font-semibold after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none";
 
-function Stat(props: {
+export function Stat(props: {
   label: string;
   value?: string;
   tone?: string;
@@ -66,7 +66,7 @@ function Stat(props: {
 // AdoRouter: the official list price, struck through, when the model's
 // cheapest lane is below it (ShowOriginalPriceEnabled fills the original_*
 // fields). The table and model page already showed it; the card did not.
-function listPrice(
+export function listPrice(
   value: number,
   original: number | null,
   unit: PriceUnit,
