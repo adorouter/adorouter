@@ -21,8 +21,9 @@ export const BADGE_TYPES = [
   "hero",
   "referral",
   "brand",
-  "chat",
-  "tester",
+  // AdoRouter: no "chat" badge (it sold the chat as roleplay, with characters,
+  // lorebooks and personas, which this chat doesn't have and Creem forbids
+  // marketing) and no "tester" badge (the model tester is off).
 ] as const;
 export type BadgeType = (typeof BADGE_TYPES)[number];
 

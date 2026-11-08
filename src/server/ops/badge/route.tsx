@@ -20,7 +20,6 @@ import { THEME_COLORS } from "./lib/theme";
 import type { BadgeCtx } from "./lib/types";
 import { AllPage, type PreviewGroup } from "./templates/all-page";
 import { generateBrand } from "./templates/brand";
-import { generateChat } from "./templates/chat";
 import { generateCompare } from "./templates/compare";
 import { generateHero } from "./templates/hero";
 import { generateModel } from "./templates/model";
@@ -29,7 +28,6 @@ import { generateProviders } from "./templates/providers";
 import { generateReferral } from "./templates/referral";
 import { generateSocial } from "./templates/social";
 import { generateSponsor } from "./templates/sponsor";
-import { generateTester } from "./templates/tester";
 import { generateTokensBanner } from "./templates/tokens-banner";
 import { generateTokensSquare } from "./templates/tokens-square";
 
@@ -140,8 +138,6 @@ const BADGES: Record<BadgeType, (ctx: BadgeCtx) => Promise<string>> = {
   hero: generateHero,
   referral: generateReferral,
   brand: generateBrand,
-  chat: generateChat,
-  tester: generateTester,
 };
 
 export const badgeRoute = new Elysia({ prefix: "/badge" })

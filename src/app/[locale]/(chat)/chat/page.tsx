@@ -9,7 +9,7 @@ export function generateMetadata(props: {
     props,
     namespace: "CHAT",
     href: "/chat",
-    badge: "chat",
+    badge: "brand",
   });
 }
 

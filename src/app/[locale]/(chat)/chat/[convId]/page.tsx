@@ -21,7 +21,7 @@ export async function generateMetadata(props: Props) {
     description: t("CHAT.META.DESCRIPTION"),
     keywords: t("CHAT.META.KEYWORDS"),
     robots: false,
-    ogImage: ogBadge("chat", locale),
+    ogImage: ogBadge("brand", locale),
   });
 }
 
