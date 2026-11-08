@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { env } from "@/lib/config/env";
 import { AdoCode, AdoList, AdoPage, AdoSection } from "./ado-parts";
+import { AdoPrimaryCta } from "./ado-primary-cta";
 
 const chatExample = (baseUrl: string) => `curl ${baseUrl}/v1/chat/completions \\
   -H "Authorization: Bearer $ADOROUTER_API_KEY" \\
@@ -36,9 +37,7 @@ export function AdoHome() {
         change one line in your code. You only pay for what you use.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
-        <Button nativeButton={false} render={<Link href="/register" />}>
-          Create an account
-        </Button>
+        <AdoPrimaryCta />
         <Button
           variant="outline"
           nativeButton={false}
