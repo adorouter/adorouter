@@ -2,6 +2,11 @@ import { rec } from "@/lib/utils/base";
 
 type Messages = Record<string, unknown>;
 
+// AdoRouter: the docs index, the chat docs, the platform docs and upstream's
+// home sections have no route here (AdoHome and AdoDocs are our own), and
+// their copy is mostly roleplay: characters, lorebooks, JanitorAI imports. Sent
+// to every visitor, it read as a companion product in the page source. The
+// client guides below are the roleplay ones, also without a route.
 const CLIENT_STRIPPED_NAMESPACES = [
   "TERMS",
   "PRIVACY",
@@ -9,9 +14,27 @@ const CLIENT_STRIPPED_NAMESPACES = [
   "AUP",
   "IMPRESSUM",
   "WELL_KNOWN",
+  "DOCS_INDEX",
+  "DOCS_CHAT",
+  "DOCS_PLATFORM",
+  // Read only by the server-side badge renderer.
+  "BADGE",
 ] as const;
 
-const CLIENT_STRIPPED_SUBTREES = ["BLOG.POSTS"] as const;
+const CLIENT_STRIPPED_SUBTREES = [
+  "BLOG.POSTS",
+  "HOME.CHAT",
+  "HOME.INTEGRATION",
+  "HOME.HOW_IT_WORKS",
+  // Upstream's pricing page; ours is AdoPricing.
+  "PRICING.FAQ",
+  "PRICING.META",
+  "DOCS.SILLYTAVERN",
+  "DOCS.JANITOR_AI",
+  "DOCS.RISUAI",
+  "DOCS.CHUB",
+  "DOCS.NEVIKA",
+] as const;
 
 // WEBMCP_TOOLS resolves these in a client effect, so stripping all of
 // WELL_KNOWN (4096 bytes) threw MISSING_MESSAGE; keeping the two leaves costs 1114.
