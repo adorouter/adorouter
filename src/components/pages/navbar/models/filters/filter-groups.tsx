@@ -23,7 +23,7 @@ export function GroupShell(props: {
   return (
     <SidebarGroup className="py-1">
       <Collapsible defaultOpen={props.defaultOpen ?? true}>
-        <CollapsibleTrigger className="text-foreground group/ct flex w-full items-center justify-between px-2 py-1.5 font-mono text-xs font-medium uppercase">
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/ct flex w-full items-center justify-between px-2 py-1.5 font-mono text-[11px] tracking-widest uppercase transition-colors">
           <span>{props.label}</span>
           <Icon
             name="chevron-down"
@@ -50,7 +50,7 @@ export function CheckRow(props: {
       type="button"
       onClick={props.onToggle}
       className={cn(
-        "flex w-full items-center gap-2 rounded px-1.5 py-1 text-left font-mono text-sm transition-colors",
+        "flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm transition-colors",
         props.checked
           ? "text-foreground"
           : "text-muted-foreground hover:text-foreground",
@@ -58,7 +58,7 @@ export function CheckRow(props: {
     >
       <span
         className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded-md border",
           props.checked
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border",

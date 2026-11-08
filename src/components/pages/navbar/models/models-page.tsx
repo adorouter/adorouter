@@ -12,8 +12,10 @@ import { clearFiltersAtom, isDirtyAtom } from "@/store/models-store";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Icon } from "@/components/ui/icon";
 import { ModelGridCard } from "./browse/model-grid-card";
+import { ModelsFilterPanel } from "./filters/models-filter-panel";
 import { ModelsEmpty } from "./browse/models-empty";
 import { SearchBox } from "./browse/models-toolbar";
 import { ModelsUrlSync } from "./models-url-sync";
@@ -38,8 +40,9 @@ const MODALITY_LABEL_KEY = {
   decisions: msg("MODELS.MODALITY.DECISIONS"),
 } satisfies Record<OutputModality, ReturnType<typeof msg>>;
 
-// A header, modality chips and a card grid, rather than unorouter's filter
-// sidebar and table. With a small catalog the sidebar's filters sat empty.
+// A header, modality chips, and a card grid beside a sticky filter column
+// (above the grid behind a Filters button on phones), rather than
+// unorouter's offcanvas sidebar and table.
 // `providers` is the server-rendered "browse by provider" row, shown under the
 // header so visitors can jump to a maker before scrolling the grid.
 export function ModelsPage(props: { providers?: ReactNode }) {
@@ -47,6 +50,7 @@ export function ModelsPage(props: { providers?: ReactNode }) {
   const m = useModelsFilter();
   const clearFilters = useSetAtom(clearFiltersAtom);
   const isDirty = useAtomValue(isDirtyAtom);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const counts = countByOutputModality(m.tabModels);
   const chips = OUTPUT_MODALITIES.filter(
@@ -96,24 +100,49 @@ export function ModelsPage(props: { providers?: ReactNode }) {
         </div>
       )}
 
-      <div className="mt-8">
-        {m.filtered.length === 0 ? (
-          <ModelsEmpty
-            filtered={isDirty}
-            count={isDirty ? 1 : 0}
-            onReset={clearFilters}
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {m.filtered.map((model) => (
-              <ModelGridCard
-                key={model.model_name}
-                model={model}
-                onOpen={() => m.setSelectedModelName(model.model_name)}
-              />
-            ))}
-          </div>
+      <button
+        type="button"
+        aria-expanded={filtersOpen}
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        className={cn(
+          "mt-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors lg:hidden",
+          isDirty
+            ? "border-primary/60 text-primary"
+            : "border-border text-foreground/80 hover:border-foreground/40",
         )}
+      >
+        <Icon name="sliders-horizontal" className="h-4 w-4" />
+        {t("MODELS.FILTER.TITLE")}
+      </button>
+
+      <div className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside
+          className={cn(
+            "no-scrollbar lg:sticky lg:top-24 lg:block lg:max-h-[calc(100svh-7rem)] lg:self-start lg:overflow-y-auto",
+            !filtersOpen && "hidden",
+          )}
+        >
+          <ModelsFilterPanel models={m.models} />
+        </aside>
+        <div className="min-w-0">
+          {m.filtered.length === 0 ? (
+            <ModelsEmpty
+              filtered={isDirty}
+              count={isDirty ? 1 : 0}
+              onReset={clearFilters}
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {m.filtered.map((model) => (
+                <ModelGridCard
+                  key={model.model_name}
+                  model={model}
+                  onOpen={() => m.setSelectedModelName(model.model_name)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <ModelDetailSheet

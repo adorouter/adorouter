@@ -2,11 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-} from "@/components/ui/sidebar";
 import type { PricingCatalogModel } from "@/openapi";
 import {
   categoriesAtom,
@@ -40,7 +35,10 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 
-export function ModelsFilterSidebar(props: { models: PricingCatalogModel[] }) {
+// AdoRouter: the filters as a plain panel the models page places itself (a
+// sticky column beside the grid, or above it on phones), rather than
+// upstream's offcanvas sidebar.
+export function ModelsFilterPanel(props: { models: PricingCatalogModel[] }) {
   const t = useTranslations();
 
   const [inputModalities, setInputModalities] = useAtom(inputModalitiesAtom);
@@ -79,77 +77,72 @@ export function ModelsFilterSidebar(props: { models: PricingCatalogModel[] }) {
   const vendorOptions = uniqueSorted(props.models.map((m) => m.vendor));
 
   return (
-    <Sidebar
-      collapsible="offcanvas"
-      className="absolute! inset-y-0 h-full! bg-transparent"
-    >
-      <div className="sticky top-14 flex max-h-[calc(100svh-3.5rem)] flex-col">
-        <SidebarHeader className="flex-row items-center justify-between px-3 py-2">
-          <span className="font-mono text-sm font-medium">
-            {t("MODELS.FILTER.TITLE")}
-          </span>
-          {isDirty && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => clearFilters()}
-              className="h-7 px-2"
-            >
-              {t("MODELS.FILTER.RESET")}
-              <Icon name="x" className="ml-1 h-3.5 w-3.5" />
-            </Button>
-          )}
-        </SidebarHeader>
-        <SidebarContent className="gap-4 overflow-y-auto px-3 py-2">
-          <InputModalitiesGroup
-            value={inputModalities}
-            onChange={setInputModalities}
-          />
-          <ToolsGroup value={toolsOnly} onChange={setToolsOnly} />
-          <PricingGroup
-            value={hideFree}
-            onChange={setHideFree}
-            discountedOnly={discountedOnly}
-            onDiscountedOnlyChange={setDiscountedOnly}
-          />
-          <ContextGroup value={contextMin} onChange={setContextMin} />
-          <PriceGroup
-            label={t("MODELS.FILTER.PROMPT_PRICING")}
-            value={priceRange[1]}
-            onChange={(n) => setPriceRange([0, n])}
-          />
-          <PriceGroup
-            label={t("MODELS.FILTER.OUTPUT_PRICING")}
-            value={outputPriceMax}
-            onChange={setOutputPriceMax}
-          />
-          <ModelAgeGroup value={maxAgeDays} onChange={setMaxAgeDays} />
-          <MultiSelectGroup
-            label={t("MODELS.FILTER.SERIES")}
-            options={seriesOptions}
-            value={series}
-            onChange={setSeries}
-          />
-          <MultiSelectGroup
-            label={t("MODELS.FILTER.CATEGORIES")}
-            options={categoryOptions}
-            value={categories}
-            onChange={setCategories}
-          />
-          <MultiSelectGroup
-            label={t("MODELS.FILTER.SUPPORTED_PARAMETERS")}
-            options={paramOptions}
-            value={supportedParameters}
-            onChange={setSupportedParameters}
-          />
-          <MultiSelectGroup
-            label={t("MODELS.FILTER.PROVIDERS")}
-            options={vendorOptions}
-            value={selectedVendors}
-            onChange={setSelectedVendors}
-          />
-        </SidebarContent>
+    <div className="border-border flex flex-col rounded-2xl border py-2">
+      <div className="flex items-center justify-between px-4 py-1.5">
+        <span className="text-sm font-semibold">
+          {t("MODELS.FILTER.TITLE")}
+        </span>
+        {isDirty && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => clearFilters()}
+            className="h-7 px-2"
+          >
+            {t("MODELS.FILTER.RESET")}
+            <Icon name="x" className="ml-1 h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
-    </Sidebar>
+      <div className="flex flex-col gap-1 px-2 pb-1">
+        <InputModalitiesGroup
+          value={inputModalities}
+          onChange={setInputModalities}
+        />
+        <ToolsGroup value={toolsOnly} onChange={setToolsOnly} />
+        <PricingGroup
+          value={hideFree}
+          onChange={setHideFree}
+          discountedOnly={discountedOnly}
+          onDiscountedOnlyChange={setDiscountedOnly}
+        />
+        <ContextGroup value={contextMin} onChange={setContextMin} />
+        <PriceGroup
+          label={t("MODELS.FILTER.PROMPT_PRICING")}
+          value={priceRange[1]}
+          onChange={(n) => setPriceRange([0, n])}
+        />
+        <PriceGroup
+          label={t("MODELS.FILTER.OUTPUT_PRICING")}
+          value={outputPriceMax}
+          onChange={setOutputPriceMax}
+        />
+        <ModelAgeGroup value={maxAgeDays} onChange={setMaxAgeDays} />
+        <MultiSelectGroup
+          label={t("MODELS.FILTER.SERIES")}
+          options={seriesOptions}
+          value={series}
+          onChange={setSeries}
+        />
+        <MultiSelectGroup
+          label={t("MODELS.FILTER.CATEGORIES")}
+          options={categoryOptions}
+          value={categories}
+          onChange={setCategories}
+        />
+        <MultiSelectGroup
+          label={t("MODELS.FILTER.SUPPORTED_PARAMETERS")}
+          options={paramOptions}
+          value={supportedParameters}
+          onChange={setSupportedParameters}
+        />
+        <MultiSelectGroup
+          label={t("MODELS.FILTER.PROVIDERS")}
+          options={vendorOptions}
+          value={selectedVendors}
+          onChange={setSelectedVendors}
+        />
+      </div>
+    </div>
   );
 }
