@@ -17,21 +17,4 @@ export default defineConfig({
     },
     hooks: { afterAllFilesWrite: "prettier --write" },
   },
-  // Called straight from the browser: the import endpoints take no token and
-  // allow this origin, so there is no BFF route in front of them.
-  unoImport: {
-    input: "https://cards.unorouter.com/openapi/json",
-    output: {
-      target: "./src/lib/api/uno-import.ts",
-      client: "fetch",
-      override: {
-        mutator: {
-          path: "./src/lib/api/uno-import-fetch.ts",
-          name: "unoImportFetch",
-        },
-        aliasCombinedTypes: true,
-      },
-    },
-    hooks: { afterAllFilesWrite: "prettier --write" },
-  },
 });

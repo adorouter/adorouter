@@ -1,4 +1,3 @@
-import { CHAT_DOCS } from "@/components/pages/docs/chat/chat-docs";
 import { PLATFORM_DOCS } from "@/components/pages/docs/platform/platform-docs";
 import { SETUP_GUIDES } from "@/components/pages/docs/setup-guides";
 import { TERMS_VERSION } from "@/i18n/terms-version";
@@ -16,11 +15,6 @@ const GUIDE_DATES: Record<string, string> = {
   "gemini-cli": "2026-03-22",
   openclaw: "2026-02-26",
   "cc-switch": "2026-03-27",
-  sillytavern: "2026-04-23",
-  "janitor-ai": "2026-04-23",
-  risuai: "2026-04-23",
-  chub: "2026-04-23",
-  nevika: "2026-08-01",
   hermes: "2026-05-29",
   mcp: "2026-07-10",
   librechat: "2026-07-05",
@@ -59,20 +53,6 @@ const GUIDE_ENTRIES = SETUP_GUIDES.map((guide): DocEntry => ({
 
 const CHAT_PLATFORM_DOCS_DATE = "2026-07-05";
 
-const CHAT_DOC_DATES: Record<string, string> = {
-  "janitorai-import": "2026-09-02",
-  theme: "2026-09-14",
-};
-
-const CHAT_DOC_ENTRIES = CHAT_DOCS.map((doc): DocEntry => ({
-  slug: `docs/chat/${doc.slug}`,
-  path: doc.href,
-  i18nPrefix: doc.i18nPrefix,
-  date: CHAT_DOC_DATES[doc.slug] ?? CHAT_PLATFORM_DOCS_DATE,
-  priority: 0.7,
-  changeFrequency: "weekly",
-}));
-
 const PLATFORM_DOC_DATES: Record<string, string> = {
   "discord-rewards": "2026-07-18",
   notifications: "2026-07-19",
@@ -107,14 +87,6 @@ export const DOCS_REGISTRY: readonly DocEntry[] = [
     changeFrequency: "daily",
   },
   {
-    slug: "docs/chat",
-    path: "/docs/chat",
-    i18nPrefix: "DOCS_CHAT.INDEX",
-    date: "2026-07-05",
-    priority: 0.8,
-    changeFrequency: "weekly",
-  },
-  {
     slug: "docs/platform",
     path: "/docs/platform",
     i18nPrefix: "DOCS_PLATFORM.INDEX",
@@ -123,7 +95,6 @@ export const DOCS_REGISTRY: readonly DocEntry[] = [
     changeFrequency: "weekly",
   },
   ...GUIDE_ENTRIES,
-  ...CHAT_DOC_ENTRIES,
   ...PLATFORM_DOC_ENTRIES,
 ];
 

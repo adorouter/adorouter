@@ -1,14 +1,6 @@
 "use client";
 
 import {
-  chatDocsNavGroups,
-  chatDocsNavItemsOverview,
-  docsNavGroups,
-  docsNavItemsOverview,
-  platformDocsNavGroups,
-  platformDocsNavItemsOverview,
-} from "@/components/layout/docs/docs-navigation";
-import {
   type NavigationItem,
   isActiveLink,
   navigation,
@@ -22,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { GuideIcon } from "@/components/pages/docs/guide-icon";
 import { Icon } from "@/components/ui/icon";
 import { APP_VALUES } from "@/lib/config/constants";
 import { useAuthQuery } from "@/hooks/auth/auth-hook";
@@ -63,18 +54,7 @@ function NavGroup(props: { label: string; items: NavigationItem[] }) {
                     isActive && "bg-primary/10 text-primary font-medium",
                   )}
                 >
-                  {item.guideIcon ? (
-                    <span className="flex size-4 shrink-0 items-center justify-center">
-                      <GuideIcon
-                        iconKey={item.guideIcon.iconKey}
-                        logoSrc={item.guideIcon.logoSrc}
-                        logoBg={item.guideIcon.logoBg}
-                        logoMono={item.guideIcon.logoMono}
-                        accentClass={isActive ? "text-primary" : ""}
-                        size={16}
-                      />
-                    </span>
-                  ) : item.iconName ? (
+                  {item.iconName ? (
                     <Icon
                       name={item.iconName}
                       className={cn("size-4", isActive && "text-primary")}
@@ -101,7 +81,6 @@ interface SidebarNavigationProps {
 
 export function SidebarNavigation(props: SidebarNavigationProps) {
   const t = useTranslations();
-  const pathname = usePathname();
   const { data: user } = useAuthQuery();
   const authenticated = !!user;
   // A negotiated top-up bonus is what marks an enterprise partner account.
@@ -115,37 +94,6 @@ export function SidebarNavigation(props: SidebarNavigationProps) {
 
   if (props.navConfig === "generate") {
     return <GenerateSidebarNav authenticated={authenticated} />;
-  }
-
-  if (props.navConfig === "docs") {
-    const mainNavItems = navigation(authenticated).filter(
-      (item) => !item.hidden && item.href !== "/docs",
-    );
-    const platformDocs = pathname.startsWith("/docs/platform");
-    const chatDocs = !platformDocs && pathname.startsWith("/docs/chat");
-    const overview = platformDocs
-      ? platformDocsNavItemsOverview
-      : chatDocs
-        ? chatDocsNavItemsOverview
-        : docsNavItemsOverview;
-    const groups = platformDocs
-      ? platformDocsNavGroups
-      : chatDocs
-        ? chatDocsNavGroups
-        : docsNavGroups;
-    return (
-      <>
-        <NavGroup label={t("DOCS_SIDEBAR.TITLE")} items={overview} />
-        {groups.map((group) => (
-          <NavGroup
-            key={group.labelKey}
-            label={t(group.labelKey)}
-            items={group.items}
-          />
-        ))}
-        <NavGroup label={t("SIDEBAR.NAVIGATE")} items={mainNavItems} />
-      </>
-    );
   }
 
   const navItems = sidebarNavigation(isPartner).filter((item) => !item.hidden);

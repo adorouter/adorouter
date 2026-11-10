@@ -2,11 +2,10 @@ import { rec } from "@/lib/utils/base";
 
 type Messages = Record<string, unknown>;
 
-// AdoRouter: the docs index, the chat docs, the platform docs and upstream's
-// home sections have no route here (AdoHome and AdoDocs are our own), and
-// their copy is mostly roleplay: characters, lorebooks, JanitorAI imports. Sent
-// to every visitor, it read as a companion product in the page source. The
-// client guides below are the roleplay ones, also without a route.
+// AdoRouter: the docs index and the platform docs have no route here (AdoHome
+// and AdoDocs are our own). Upstream's chat docs, home sections, roleplay
+// client guides and roleplay copy are deleted from the messages; what is left
+// here is stripped so the page source carries only what the site shows.
 const CLIENT_STRIPPED_NAMESPACES = [
   "TERMS",
   "PRIVACY",
@@ -15,7 +14,6 @@ const CLIENT_STRIPPED_NAMESPACES = [
   "IMPRESSUM",
   "WELL_KNOWN",
   "DOCS_INDEX",
-  "DOCS_CHAT",
   "DOCS_PLATFORM",
   // Read only by the server-side badge renderer.
   "BADGE",
@@ -23,17 +21,9 @@ const CLIENT_STRIPPED_NAMESPACES = [
 
 const CLIENT_STRIPPED_SUBTREES = [
   "BLOG.POSTS",
-  "HOME.CHAT",
-  "HOME.INTEGRATION",
-  "HOME.HOW_IT_WORKS",
   // Upstream's pricing page; ours is AdoPricing.
   "PRICING.FAQ",
   "PRICING.META",
-  "DOCS.SILLYTAVERN",
-  "DOCS.JANITOR_AI",
-  "DOCS.RISUAI",
-  "DOCS.CHUB",
-  "DOCS.NEVIKA",
 ] as const;
 
 // WEBMCP_TOOLS resolves these in a client effect, so stripping all of
@@ -59,8 +49,6 @@ const CLIENT_DOCS_GUIDE_LEAVES = [
   "CTA_SIGNUP",
   "CTA_DASHBOARD",
 ] as const;
-
-const CLIENT_DOCS_CHAT_KEPT = ["COMMON", "INDEX"] as const;
 
 const CLIENT_DOCS_PLATFORM_KEPT = ["COMMON", "INDEX"] as const;
 
@@ -89,10 +77,6 @@ function pruneDocsNamespace(
 
 export function pruneClientMessages(messages: Messages): Messages {
   const prunedDocs = pruneDocsNamespace(messages.DOCS, CLIENT_DOCS_KEPT);
-  const prunedDocsChat = pruneDocsNamespace(
-    messages.DOCS_CHAT,
-    CLIENT_DOCS_CHAT_KEPT,
-  );
   const prunedDocsPlatform = pruneDocsNamespace(
     messages.DOCS_PLATFORM,
     CLIENT_DOCS_PLATFORM_KEPT,
@@ -101,7 +85,6 @@ export function pruneClientMessages(messages: Messages): Messages {
   const pruned: Messages = {
     ...messages,
     DOCS: prunedDocs,
-    DOCS_CHAT: prunedDocsChat,
     DOCS_PLATFORM: prunedDocsPlatform,
   };
   for (const subtree of CLIENT_STRIPPED_SUBTREES) {

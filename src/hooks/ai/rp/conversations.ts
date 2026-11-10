@@ -20,14 +20,6 @@ import {
   mapNativeImport,
   mapOrpgImport,
 } from "@/lib/db/client/data/transfer/map";
-import {
-  importJanitorAiExport,
-  looksLikeJanitorAiExport,
-} from "@/lib/db/client/data/transfer/janitorai";
-import {
-  importSillyTavernChat,
-  looksLikeSillyTavernChat,
-} from "@/lib/db/client/data/transfer/sillytavern";
 import { queryKeys } from "@/lib/react-query/keys";
 import type {
   UpdateConversationBindingsBody,
@@ -108,10 +100,8 @@ export function useImportConversationMutation() {
     mutationFn: async (file: File) => {
       const text = await file.text();
 
-      if (looksLikeSillyTavernChat(text)) {
-        return importSillyTavernChat(text);
-      }
-
+      // AdoRouter: only our own and OpenRouter playground exports are read.
+      // Upstream also imported roleplay apps' chats, which the plain chat drops.
       let parsed: unknown;
       try {
         parsed = JSON.parse(text);
@@ -122,12 +112,6 @@ export function useImportConversationMutation() {
         throw new Error(msg("ERRORS.IMPORT_INVALID_JSON"));
       }
 
-      // JanitorAI's community bulk exporter writes one file holding EVERY chat,
-      // so this branch can create hundreds of conversations from a single
-      // import. It carries no card or lorebook, only history.
-      if (looksLikeJanitorAiExport(parsed)) {
-        return importJanitorAiExport(parsed);
-      }
       if (parsed.version === NATIVE_VERSION) {
         return persistMappedImport(mapNativeImport(parsed));
       }

@@ -1,4 +1,3 @@
-import type { IntegrationIconKey } from "@/components/pages/docs/integration-types";
 import type { LinkHref } from "@/i18n/routing";
 import { TranslationKey } from "@/lib/config/constants";
 import type { IconName } from "@/lib/config/icon-map";
@@ -10,12 +9,6 @@ export type NavigationItem = {
   href: LinkHref;
   iconName?: IconName;
   iconComponent?: ComponentType<{ className?: string }>;
-  guideIcon?: {
-    iconKey: IntegrationIconKey;
-    logoSrc?: string;
-    logoBg?: boolean;
-    logoMono?: boolean;
-  };
   hidden?: boolean;
   exact?: boolean;
   onClick?: (e: React.MouseEvent) => void;

@@ -245,7 +245,9 @@ function ChatRuntimeHook() {
         if (!announcedDroppedParams.has(key)) {
           announcedDroppedParams.add(key);
           toast.info(
-            t("RP.DROPPED_PARAMS", { params: message.metadata.droppedParams }),
+            t("SAMPLING.DROPPED_PARAMS", {
+              params: message.metadata.droppedParams,
+            }),
           );
         }
       }

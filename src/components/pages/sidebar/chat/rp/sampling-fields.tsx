@@ -67,7 +67,7 @@ export function SamplingFields<TForm extends Record<string, unknown>>(
           const fieldMax = hasCap ? maxTokensCap : param.max;
           const label =
             hasCap && maxTokensCap !== param.max
-              ? t("RP.SAMPLING_MAX_TOKENS_CAP", {
+              ? t("SAMPLING.MAX_TOKENS_CAP", {
                   cap: maxTokensCap.toLocaleString(),
                 })
               : t(param.labelKey);
@@ -83,7 +83,7 @@ export function SamplingFields<TForm extends Record<string, unknown>>(
                     <InfoPopover
                       text={t(param.hintKey)}
                       details={t(param.exampleKey)}
-                      detailsLabel={t("RP.SAMPLING_ADVANCED")}
+                      detailsLabel={t("SAMPLING.ADVANCED")}
                     />
                   }
                   value={(field.value as number | null) ?? null}

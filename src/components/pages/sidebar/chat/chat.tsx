@@ -13,11 +13,7 @@ import { useAuiState } from "@assistant-ui/react";
 import { useSetAtom } from "jotai";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
-import {
-  ActiveConfigBadge,
-  CharacterBackground,
-  NeedsTokenGate,
-} from "./chat-elements";
+import { ActiveConfigBadge, NeedsTokenGate } from "./chat-elements";
 
 type ChatProps = {
   convId?: string;
@@ -97,7 +93,6 @@ export function Chat(props: ChatProps) {
 
   return (
     <div className="relative isolate flex min-h-0 min-w-0 flex-1 flex-col">
-      <CharacterBackground convId={effectiveId} />
       <ActiveConfigBadge />
       <SectionBoundary source="chat.thread">
         <Thread />

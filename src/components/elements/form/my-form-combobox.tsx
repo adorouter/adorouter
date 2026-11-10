@@ -19,7 +19,7 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { RpAvatar } from "@/components/pages/sidebar/chat/rp/shared/rp-list-parts";
+import { EntityAvatar } from "@/components/elements/form/entity-avatar";
 import type { NamedEntity } from "@/lib/types";
 import { isStringArray } from "@/lib/utils/base";
 import type { ReactNode } from "react";
@@ -78,7 +78,7 @@ export function MyFormCombobox<T extends FieldValues>(props: {
                     {(id: string) => (
                       <ComboboxItem key={id} value={id}>
                         <span className="flex min-w-0 items-center gap-2">
-                          <RpAvatar
+                          <EntityAvatar
                             mediaId={lookup.get(id)?.avatarMediaId}
                             name={lookup.get(id)?.name ?? id}
                             className="size-5"

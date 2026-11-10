@@ -3,14 +3,8 @@
 import { ModelSelector } from "@/components/elements/model/model-selector";
 import { Icon } from "@/components/ui/icon";
 import { useConversationQuery } from "@/hooks/ai/chat-hook";
-import { useCharacterQuery } from "@/hooks/ai/rp/characters";
-import {
-  useChatBindingsQuery,
-  useChatSettingsQuery,
-} from "@/hooks/ai/rp/conversations";
-import { usePersonasQuery } from "@/hooks/ai/rp/personas";
+import { useChatSettingsQuery } from "@/hooks/ai/rp/conversations";
 import { usePresetsQuery } from "@/hooks/ai/rp/presets";
-import { useMediaFocal, useMediaSrc } from "@/hooks/ai/use-media-src";
 import { useApiKey } from "@/hooks/ui/use-api-key";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { NONE_VALUE } from "@/lib/config/constants";
@@ -85,9 +79,7 @@ export function ActiveConfigBadge() {
   const threadId = useAuiState((s) => s.threadListItem?.remoteId);
   const openSettings = useSetAtom(conversationSettingsOpenAtom);
   const settings = useChatSettingsQuery(threadId ?? undefined).data;
-  const bindings = useChatBindingsQuery(threadId ?? undefined).data;
   const presets = usePresetsQuery().data;
-  const personas = usePersonasQuery().data;
 
   if (!threadId || !settings) return null;
 
@@ -96,26 +88,12 @@ export function ActiveConfigBadge() {
   const presetName = presets?.find(
     (p) => p.id === boundId(settings.presetId),
   )?.name;
-  const persona = personas?.find((p) => p.id === boundId(settings.personaId));
-  const personaName = persona ? persona.title || persona.name : undefined;
-  const characterCount = bindings?.characters?.length ?? 0;
-  const lorebookCount = bindings?.lorebooks?.length ?? 0;
 
-  type Chip = {
-    icon: "sliders-horizontal" | "user" | "users" | "book-open";
-    label: string;
-  };
+  // AdoRouter: upstream also showed persona, character and lorebook chips,
+  // which the plain chat no longer sets.
+  type Chip = { icon: "sliders-horizontal"; label: string };
   const chips = [
     presetName && { icon: "sliders-horizontal", label: presetName },
-    personaName && { icon: "user", label: personaName },
-    characterCount > 0 && {
-      icon: "users",
-      label: t("CHAT.ACTIVE_CONFIG.CHARACTERS", { count: characterCount }),
-    },
-    lorebookCount > 0 && {
-      icon: "book-open",
-      label: t("CHAT.ACTIVE_CONFIG.LOREBOOKS", { count: lorebookCount }),
-    },
   ].filter((c): c is Chip => Boolean(c));
 
   if (chips.length === 0) return null;
@@ -176,27 +154,6 @@ export function ConversationStats(props: { convId?: string }) {
         </>
       )}
     </div>
-  );
-}
-
-export function CharacterBackground(props: { convId?: string }) {
-  const bindings = useChatBindingsQuery(props.convId);
-  const primary = (bindings.data?.characters ?? [])
-    .filter((c) => c.isActive)
-    .sort((a, b) => a.orderIndex - b.orderIndex)[0];
-  const character = useCharacterQuery(primary?.characterId);
-  const src = useMediaSrc(character.data?.backgroundMediaId);
-  const backgroundPosition = useMediaFocal(character.data?.backgroundMediaId);
-  if (!src) return null;
-  return (
-    <>
-      <div
-        className="absolute inset-0 -z-10 bg-cover"
-        style={{ backgroundImage: `url(${src})`, backgroundPosition }}
-      />
-      <div className="bg-background/55 absolute inset-0 -z-10" />
-      <style>{".aui-thread-root{background-color:transparent}"}</style>
-    </>
   );
 }
 

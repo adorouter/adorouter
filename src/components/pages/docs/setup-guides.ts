@@ -6,7 +6,7 @@ import type { DocI18nPrefix } from "@/lib/types";
 import type { OS } from "@/lib/types/enums";
 import type { IntegrationColor, IntegrationIconKey } from "./integration-types";
 
-export type SetupCategory = "coding" | "roleplay" | "general" | "cli";
+export type SetupCategory = "coding" | "general" | "cli";
 
 export interface SetupCompatibility {
   chatCompletions?: boolean;
@@ -29,7 +29,7 @@ export interface SetupGuide {
   slug: string;
   href: Pathname;
   i18nPrefix: DocI18nPrefix;
-  kind: "cli" | "rp" | "general";
+  kind: "cli" | "general";
   category: SetupCategory;
   titleKey: TranslationKey;
   subtitleKey: TranslationKey;
@@ -553,330 +553,6 @@ API Endpoint: ${env.apiUrl}/v1`,
       },
     ],
     gotchaKeys: ["DOCS.BIG_AGI.TS_1_DESC", "DOCS.BIG_AGI.TS_2_DESC"],
-  },
-  {
-    slug: "sillytavern",
-    href: {
-      pathname: "/docs/integrations/[slug]",
-      params: { slug: "sillytavern" },
-    },
-    i18nPrefix: "DOCS.SILLYTAVERN",
-    kind: "rp",
-    category: "roleplay",
-    titleKey: "DOCS.SILLYTAVERN.TITLE",
-    subtitleKey: "DOCS.SILLYTAVERN.SUBTITLE",
-    badgeKey: "DOCS.SILLYTAVERN.BADGE",
-    iconKey: "sillytavern",
-    color: guideColor("pink"),
-    baseUrl: `${env.apiUrl}/v1`,
-    compatibility: {
-      chatCompletions: true,
-      messages: true,
-      streaming: true,
-      toolCalling: true,
-    },
-    recommendedModels: [],
-    steps: [
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_1_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_1_DESC",
-      },
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_2_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_2_DESC",
-      },
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_3_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_3_DESC",
-      },
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_4_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_4_DESC",
-        code: {
-          lang: "text",
-          value: `Custom Endpoint (Base URL): ${env.apiUrl}/v1`,
-        },
-      },
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_5_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_5_DESC",
-      },
-      {
-        titleKey: "DOCS.SILLYTAVERN.STEP_6_TITLE",
-        bodyKey: "DOCS.SILLYTAVERN.STEP_6_DESC",
-      },
-    ],
-    install: {
-      titleKey: "DOCS.SILLYTAVERN.TERMUX_TITLE",
-      descKey: "DOCS.SILLYTAVERN.TERMUX_DESC",
-      steps: [
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_1_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_1_DESC",
-        },
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_2_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_2_DESC",
-          code: {
-            lang: "bash",
-            value: "termux-change-repo\npkg update && pkg upgrade",
-          },
-        },
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_3_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_3_DESC",
-          code: { lang: "bash", value: "pkg install git nodejs-lts nano" },
-        },
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_4_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_4_DESC",
-          code: {
-            lang: "bash",
-            value:
-              "git clone https://github.com/SillyTavern/SillyTavern -b release",
-          },
-        },
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_5_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_5_DESC",
-          code: { lang: "bash", value: "cd ~/SillyTavern\nbash start.sh" },
-        },
-        {
-          titleKey: "DOCS.SILLYTAVERN.TERMUX_STEP_6_TITLE",
-          bodyKey: "DOCS.SILLYTAVERN.TERMUX_STEP_6_DESC",
-          code: {
-            lang: "bash",
-            value: "cd ~/SillyTavern\ngit pull --rebase --autostash",
-          },
-        },
-      ],
-    },
-    gotchaKeys: [
-      "DOCS.SILLYTAVERN.GOTCHA_1",
-      "DOCS.SILLYTAVERN.GOTCHA_2",
-      "DOCS.SILLYTAVERN.GOTCHA_3",
-      "DOCS.SILLYTAVERN.GOTCHA_4",
-    ],
-  },
-  {
-    slug: "janitor-ai",
-    href: {
-      pathname: "/docs/integrations/[slug]",
-      params: { slug: "janitor-ai" },
-    },
-    i18nPrefix: "DOCS.JANITOR_AI",
-    kind: "rp",
-    category: "roleplay",
-    titleKey: "DOCS.JANITOR_AI.TITLE",
-    subtitleKey: "DOCS.JANITOR_AI.SUBTITLE",
-    badgeKey: "DOCS.JANITOR_AI.BADGE",
-    iconKey: "janitor-ai",
-    logoSrc: "/images/icons/janitor-ai.png",
-    color: guideColor("teal"),
-    baseUrl: `${env.apiUrl}/v1`,
-    apiPath: "/chat/completions",
-    compatibility: {
-      chatCompletions: true,
-      streaming: true,
-    },
-    recommendedModels: [],
-    steps: [
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_1_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_1_DESC",
-      },
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_2_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_2_DESC",
-      },
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_3_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_3_DESC",
-        code: {
-          lang: "text",
-          value: `Proxy URL: ${env.apiUrl}/v1/chat/completions`,
-        },
-      },
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_4_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_4_DESC",
-      },
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_5_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_5_DESC",
-      },
-      {
-        titleKey: "DOCS.JANITOR_AI.STEP_6_TITLE",
-        bodyKey: "DOCS.JANITOR_AI.STEP_6_DESC",
-      },
-    ],
-    gotchaKeys: [
-      "DOCS.JANITOR_AI.GOTCHA_1",
-      "DOCS.JANITOR_AI.GOTCHA_2",
-      "DOCS.JANITOR_AI.GOTCHA_3",
-      "DOCS.JANITOR_AI.GOTCHA_4",
-      "DOCS.JANITOR_AI.GOTCHA_5",
-    ],
-  },
-  {
-    slug: "risuai",
-    href: { pathname: "/docs/integrations/[slug]", params: { slug: "risuai" } },
-    i18nPrefix: "DOCS.RISUAI",
-    kind: "rp",
-    category: "roleplay",
-    titleKey: "DOCS.RISUAI.TITLE",
-    subtitleKey: "DOCS.RISUAI.SUBTITLE",
-    badgeKey: "DOCS.RISUAI.BADGE",
-    iconKey: "risuai",
-    logoSrc: "/images/icons/risuai.png",
-    color: guideColor("amber"),
-    baseUrl: `${env.apiUrl}/v1`,
-    apiPath: "/chat/completions",
-    compatibility: {
-      chatCompletions: true,
-      streaming: true,
-    },
-    recommendedModels: [],
-    steps: [
-      {
-        titleKey: "DOCS.RISUAI.STEP_1_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_1_DESC",
-      },
-      {
-        titleKey: "DOCS.RISUAI.STEP_2_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_2_DESC",
-      },
-      {
-        titleKey: "DOCS.RISUAI.STEP_3_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_3_DESC",
-      },
-      {
-        titleKey: "DOCS.RISUAI.STEP_4_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_4_DESC",
-        code: {
-          lang: "text",
-          value: `Request URL: ${env.apiUrl}/v1/chat/completions`,
-        },
-      },
-      {
-        titleKey: "DOCS.RISUAI.STEP_5_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_5_DESC",
-      },
-      {
-        titleKey: "DOCS.RISUAI.STEP_6_TITLE",
-        bodyKey: "DOCS.RISUAI.STEP_6_DESC",
-      },
-    ],
-    gotchaKeys: [
-      "DOCS.RISUAI.GOTCHA_1",
-      "DOCS.RISUAI.GOTCHA_2",
-      "DOCS.RISUAI.GOTCHA_3",
-      "DOCS.RISUAI.GOTCHA_4",
-    ],
-  },
-  {
-    slug: "chub",
-    href: { pathname: "/docs/integrations/[slug]", params: { slug: "chub" } },
-    i18nPrefix: "DOCS.CHUB",
-    kind: "rp",
-    category: "roleplay",
-    titleKey: "DOCS.CHUB.TITLE",
-    subtitleKey: "DOCS.CHUB.SUBTITLE",
-    badgeKey: "DOCS.CHUB.BADGE",
-    iconKey: "chub",
-    logoSrc: "/images/icons/chub-ai.png",
-    logoMono: true,
-    color: guideColor("rose"),
-    baseUrl: `${env.apiUrl}/v1`,
-    compatibility: {
-      chatCompletions: true,
-      streaming: true,
-    },
-    recommendedModels: [],
-    steps: [
-      {
-        titleKey: "DOCS.CHUB.STEP_1_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_1_DESC",
-      },
-      {
-        titleKey: "DOCS.CHUB.STEP_2_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_2_DESC",
-      },
-      {
-        titleKey: "DOCS.CHUB.STEP_3_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_3_DESC",
-        code: {
-          lang: "text",
-          value: `OpenAI Reverse Proxy: ${env.apiUrl}/v1`,
-        },
-      },
-      {
-        titleKey: "DOCS.CHUB.STEP_4_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_4_DESC",
-      },
-      {
-        titleKey: "DOCS.CHUB.STEP_5_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_5_DESC",
-      },
-      {
-        titleKey: "DOCS.CHUB.STEP_CONFIG_TITLE",
-        bodyKey: "DOCS.CHUB.STEP_CONFIG_DESC",
-      },
-    ],
-    gotchaKeys: [
-      "DOCS.CHUB.GOTCHA_1",
-      "DOCS.CHUB.GOTCHA_2",
-      "DOCS.CHUB.GOTCHA_3",
-      "DOCS.CHUB.GOTCHA_4",
-    ],
-  },
-  {
-    slug: "nevika",
-    href: { pathname: "/docs/integrations/[slug]", params: { slug: "nevika" } },
-    i18nPrefix: "DOCS.NEVIKA",
-    kind: "rp",
-    category: "roleplay",
-    titleKey: "DOCS.NEVIKA.TITLE",
-    subtitleKey: "DOCS.NEVIKA.SUBTITLE",
-    badgeKey: "DOCS.NEVIKA.BADGE",
-    iconKey: "nevika",
-    logoSrc: "/images/icons/nevika.png",
-    color: guideColor("violet"),
-    baseUrl: `${env.apiUrl}/v1`,
-    apiPath: "/chat/completions",
-    compatibility: {
-      chatCompletions: true,
-      streaming: true,
-    },
-    recommendedModels: [],
-    steps: [
-      {
-        titleKey: "DOCS.NEVIKA.STEP_1_TITLE",
-        bodyKey: "DOCS.NEVIKA.STEP_1_DESC",
-      },
-      {
-        titleKey: "DOCS.NEVIKA.STEP_2_TITLE",
-        bodyKey: "DOCS.NEVIKA.STEP_2_DESC",
-      },
-      {
-        titleKey: "DOCS.NEVIKA.STEP_3_TITLE",
-        bodyKey: "DOCS.NEVIKA.STEP_3_DESC",
-        code: {
-          lang: "text",
-          value: `API Base URL: ${env.apiUrl}/v1
-API Key: YOUR_API_KEY`,
-        },
-      },
-      {
-        titleKey: "DOCS.NEVIKA.STEP_4_TITLE",
-        bodyKey: "DOCS.NEVIKA.STEP_4_DESC",
-      },
-    ],
-    gotchaKeys: [
-      "DOCS.NEVIKA.GOTCHA_1",
-      "DOCS.NEVIKA.GOTCHA_2",
-      "DOCS.NEVIKA.GOTCHA_3",
-    ],
   },
   {
     slug: "opencode",
@@ -1662,30 +1338,22 @@ chat           send a prompt to any model`,
   },
 ];
 
-export const CATEGORY_ORDER: SetupCategory[] = [
-  "coding",
-  "roleplay",
-  "general",
-  "cli",
-];
+export const CATEGORY_ORDER: SetupCategory[] = ["coding", "general", "cli"];
 
 export const CATEGORY_LABELS: Record<SetupCategory, TranslationKey> = {
   coding: "DOCS.SETUP_GUIDE.CATEGORY_CODING",
-  roleplay: "DOCS.SETUP_GUIDE.CATEGORY_ROLEPLAY",
   general: "DOCS.SETUP_GUIDE.CATEGORY_GENERAL",
   cli: "DOCS.SETUP_GUIDE.CATEGORY_CLI",
 };
 
 export const CATEGORY_ICONS: Record<SetupCategory, IconName> = {
   coding: "code",
-  roleplay: "drama",
   general: "message-circle",
   cli: "terminal",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<SetupCategory, TranslationKey> = {
   coding: "DOCS.SETUP_GUIDE.CATEGORY_CODING_DESC",
-  roleplay: "DOCS.SETUP_GUIDE.CATEGORY_ROLEPLAY_DESC",
   general: "DOCS.SETUP_GUIDE.CATEGORY_GENERAL_DESC",
   cli: "DOCS.SETUP_GUIDE.CATEGORY_CLI_DESC",
 };
@@ -1693,7 +1361,6 @@ export const CATEGORY_DESCRIPTIONS: Record<SetupCategory, TranslationKey> = {
 export function setupGuidesByCategory(): Record<SetupCategory, SetupGuide[]> {
   const buckets: Record<SetupCategory, SetupGuide[]> = {
     coding: [],
-    roleplay: [],
     general: [],
     cli: [],
   };

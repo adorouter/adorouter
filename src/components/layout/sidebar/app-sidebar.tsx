@@ -20,7 +20,7 @@ import NextLink from "next/link";
 import * as React from "react";
 import { SidebarNavigation } from "./sidebar-navigation";
 
-export type SidebarNavConfig = "default" | "docs" | "chat" | "generate";
+export type SidebarNavConfig = "default" | "chat" | "generate";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navConfig?: SidebarNavConfig;

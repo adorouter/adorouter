@@ -22,10 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCharactersQuery } from "@/hooks/ai/rp/characters";
-import { useLorebooksQuery } from "@/hooks/ai/rp/lorebooks";
-import { usePersonasQuery } from "@/hooks/ai/rp/personas";
-import { usePresetsQuery } from "@/hooks/ai/rp/presets";
 import {
   ImageModelField,
   UtilityModelField,

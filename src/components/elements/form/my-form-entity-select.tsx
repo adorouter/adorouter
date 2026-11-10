@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RpAvatar } from "@/components/pages/sidebar/chat/rp/shared/rp-list-parts";
+import { EntityAvatar } from "@/components/elements/form/entity-avatar";
 import { NONE_VALUE } from "@/lib/config/constants";
 import type { NamedEntity } from "@/lib/types";
 import type { ReactNode } from "react";
@@ -51,7 +51,7 @@ export function MyFormEntitySelect<T extends FieldValues>(props: {
                 {props.options?.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     <span className="flex min-w-0 items-center gap-2">
-                      <RpAvatar
+                      <EntityAvatar
                         mediaId={o.avatarMediaId}
                         name={o.name}
                         className="size-5"

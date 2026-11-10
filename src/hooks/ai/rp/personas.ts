@@ -1,72 +1,13 @@
 "use client";
 
-import { useApiMutation } from "@/lib/react-query/hooks";
-import { parsePersonaJson } from "@/lib/ai/rp/persona-import";
-import {
-  deleteLocalPersona,
-  readLocalPersona,
-  readLocalPersonas,
-  upsertLocalPersona,
-} from "@/lib/db/client/data/rp/rp";
-import type { PersonaRow } from "@/lib/db/schema/rows";
+// AdoRouter: read only. The plain chat has no persona editor or import.
+import { readLocalPersonas } from "@/lib/db/client/data/rp/rp";
 import { queryKeys } from "@/lib/react-query/keys";
-import { uid } from "@/lib/utils/base";
-import { dayjs } from "@/lib/utils/format/date";
-import { useTranslations } from "next-intl";
-import { makeRpEntity } from "./factory";
+import { useQuery } from "@tanstack/react-query";
 
-const personas = makeRpEntity<
-  PersonaRow,
-  Record<string, unknown>,
-  Record<string, unknown>
->({
-  listKey: queryKeys.personas,
-  itemKey: queryKeys.persona,
-  readList: readLocalPersonas,
-  readItem: readLocalPersona,
-  upsertLocal: upsertLocalPersona,
-  deleteLocal: deleteLocalPersona,
-});
-
-export const usePersonasQuery = personas.useList;
-export const usePersonaQuery = personas.useItem;
-export const useCreatePersonaMutation = personas.useCreate;
-export const useUpdatePersonaMutation = personas.useUpdate;
-export const useDeletePersonaMutation = personas.useDelete;
-export const useDuplicatePersonaMutation = personas.useDuplicate;
-
-export function useImportPersonaMutation() {
-  const t = useTranslations();
-
-  return useApiMutation({
-    mutationFn: async (file: File) => {
-      let raw: unknown;
-      try {
-        raw = JSON.parse(await file.text());
-      } catch {
-        throw new Error(t("ERRORS.REQUEST_FAILED"));
-      }
-      const parsed = parsePersonaJson(raw);
-      if (parsed.length === 0) throw new Error(t("ERRORS.REQUEST_FAILED"));
-      const now = dayjs().toDate();
-      const rows = parsed.map((p) => ({
-        id: uid(),
-        name: p.name,
-        title: p.title ?? null,
-        description: p.description ?? null,
-        personality: p.personality ?? null,
-        avatarMediaId: null,
-        isDefault: false,
-        notes: null,
-        createdAt: now,
-        updatedAt: now,
-      }));
-      for (const row of rows) {
-        await upsertLocalPersona(row);
-      }
-      return rows;
-    },
-    invalidates: [queryKeys.personas()],
+export function usePersonasQuery() {
+  return useQuery({
+    queryKey: queryKeys.personas(),
+    queryFn: async () => (await readLocalPersonas()) ?? [],
   });
 }
-
