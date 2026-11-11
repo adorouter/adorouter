@@ -53,6 +53,20 @@ const date = (v: unknown): Date | null => {
 };
 const strArr = (v: unknown): string[] | null => (isStringArray(v) ? v : null);
 
+// An export is JSON, so its dates come back as strings while the columns bind
+// Date objects, and a string there throws on insert. One that will not parse is
+// left out, so the column default applies.
+function withDates<T extends Record<string, unknown>>(row: T) {
+  const { createdAt, updatedAt, ...rest } = row;
+  const created = date(createdAt);
+  const updated = date(updatedAt);
+  return {
+    ...rest,
+    ...(created ? { createdAt: created } : {}),
+    ...(updated ? { updatedAt: updated } : {}),
+  };
+}
+
 function buildIdMap(
   items: ReadonlyArray<{ id?: unknown }> | undefined,
 ): Map<string, string> {
@@ -75,7 +89,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
   // silently drops every field the list forgets.
   const persona = native.persona
     ? {
-        ...native.persona,
+        ...withDates(native.persona),
         id: personaIdMap.get(native.persona.id)!,
         name: str(native.persona.name) ?? "",
         avatarMediaId: null,
@@ -86,7 +100,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
 
   const preset = native.preset
     ? {
-        ...native.preset,
+        ...withDates(native.preset),
         id: presetIdMap.get(native.preset.id)!,
         name: str(native.preset.name) ?? "",
         isDefault: false,
@@ -95,7 +109,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
     : null;
 
   const characters = (native.characters ?? []).map((c) => ({
-    ...c,
+    ...withDates(c),
     id: charIdMap.get(c.id)!,
     name: str(c.name) ?? "",
     isFavorite: false,
@@ -105,7 +119,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
     const newLbId = lbIdMap.get(l.id)!;
     return {
       lorebook: {
-        ...l,
+        ...withDates(l),
         id: newLbId,
         name: str(l.name) ?? "",
         scanDepth: num(l.scanDepth) ?? 4,
@@ -116,7 +130,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
       entries: (native.lorebookEntries ?? [])
         .filter((e) => e.lorebookId === l.id)
         .map((e) => ({
-          ...e,
+          ...withDates(e),
           id: uid(),
           lorebookId: newLbId,
           keys: strArr(e.keys) ?? [],
@@ -135,7 +149,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
       const newCharId = charIdMap.get(str(b.characterId) ?? "");
       if (!newCharId) return null;
       return {
-        ...b,
+        ...withDates(b),
         convId,
         characterId: newCharId,
         orderIndex: num(b.orderIndex) ?? 0,
@@ -181,7 +195,7 @@ export function mapNativeImport(native: NativeImport): MappedImport {
   });
 
   const messageItems = (native.items ?? []).map((it) => ({
-    ...it,
+    ...withDates(it),
     id: uid(),
     messageId: msgIdMap.get(str(it.messageId) ?? "")!,
     sequenceIndex: num(it.sequenceIndex) ?? 0,
@@ -246,8 +260,9 @@ export function mapOrpgImport(data: OrpgImport): MappedImport {
   const orpgMessages = data.messages ?? {};
   const orpgItems = data.items ?? {};
 
-  const firstChar = Object.values(orpgCharacters)[0];
-  const defaultModel = str(firstChar?.model) ?? "openrouter/auto";
+  // A playground file names OpenRouter's models, which this catalogue does not
+  // carry. Left empty, the chat keeps the model already picked.
+  const defaultModel = "";
 
   const charIdMap = new Map(
     Object.keys(orpgCharacters).map((id) => [id, uid()]),
